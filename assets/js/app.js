@@ -1,36 +1,10 @@
+// Supabase Configuration
+const supabaseUrl = 'https://edzldzjwogwzmekqvape.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkemxkemp3b2d3em1la3F2YXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDk5NTUsImV4cCI6MjA5MzgyNTk1NX0.k11qcVKTar0rlYtP15whBwaF2USg6gJ63hRa-2VGs7g';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
 // Global State
 let currentUserLocation = null;
-
-// Mock Data with Coordinates
-const MOCK_NEEDS = [
-    {
-        id: 1,
-        title: "Trebam košnju trave",
-        description: "Dvorište od cca 300m2. Imam kosilicu, samo mi treba netko tko bi to odradio ovaj vikend.",
-        category: "Usluge",
-        lat: 45.815, lon: 15.9819, // Zagreb
-        country: 'hr',
-        created_at: "Prije 2 sata"
-    },
-    {
-        id: 2,
-        title: "Tražim na posudbu bušilicu",
-        description: "Trebam probušiti par rupa u zidu za slike. Vraćam isti dan, uz pivo po izboru!",
-        category: "Stvari",
-        lat: 45.793, lon: 15.934, // Vrbani
-        country: 'hr',
-        created_at: "Prije 5 sati"
-    },
-    {
-        id: 3,
-        title: "Pomoć oko prijenosa namještaja",
-        description: "Trebam dvije jake ruke za iznijeti stari kauč. Trajanje cca 15 min.",
-        category: "Pomoć",
-        lat: 44.812, lon: 20.461, // Belgrade (Different country)
-        country: 'rs',
-        created_at: "Jučer"
-    }
-];
 
 // UI Elements
 const navItems = document.querySelectorAll('.nav-item');
@@ -41,7 +15,7 @@ const postForm = document.getElementById('post-form');
 // App Initialization
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
-    renderNeeds(MOCK_NEEDS);
+    fetchNeeds(); // Fetch real data from DB
     initForm();
     registerSW();
     detectLocation();
@@ -69,7 +43,8 @@ async function detectLocation() {
                 locationInput.style.color = "var(--primary)";
                 locationInput.readOnly = true;
 
-                renderNeeds(MOCK_NEEDS);
+                // Re-fetch or re-render to update distances
+                fetchNeeds();
             } catch (error) {
                 console.error("Location error:", error);
             }
@@ -79,6 +54,7 @@ async function detectLocation() {
 
 // Distance calculation
 function calculateDistance(lat1, lon1, lat2, lon2) {
+    if (!lat1 || !lon1 || !lat2 || !lon2) return null;
     const R = 6371;
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -89,17 +65,38 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return R * c;
 }
 
+// Fetch from Supabase
+async function fetchNeeds() {
+    if (!needsList) return;
+    
+    const { data, error } = await supabase
+        .from('oglasi')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+    if (error) {
+        console.error('Error fetching needs:', error);
+        return;
+    }
+
+    renderNeeds(data);
+}
+
 // Rendering Logic
 function renderNeeds(needs) {
-    if (!needsList) return;
     needsList.innerHTML = '';
     
+    if (needs.length === 0) {
+        needsList.innerHTML = '<div class="empty-state"><p>Još nema oglasa u tvom susjedstvu.</p></div>';
+        return;
+    }
+
     // Sort by distance if location available
     let sortedNeeds = [...needs];
     if (currentUserLocation) {
         sortedNeeds.sort((a, b) => {
-            const distA = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, a.lat, a.lon);
-            const distB = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, b.lat, b.lon);
+            const distA = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, a.lat, a.lon) || 9999;
+            const distB = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, b.lat, b.lon) || 9999;
             return distA - distB;
         });
     }
@@ -111,11 +108,10 @@ function renderNeeds(needs) {
         if (currentUserLocation && need.lat && need.lon) {
             const dist = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, need.lat, need.lon);
             distanceStr = dist < 1 ? `${(dist * 1000).toFixed(0)}m od tebe` : `${dist.toFixed(1)}km od tebe`;
-            isAbroad = currentUserLocation.country !== need.country;
+            isAbroad = currentUserLocation.country !== need.country_code;
         }
 
-        // Expiry calculation (simple display)
-        const expiryText = need.expiry_days ? `Istječe za ${need.expiry_days} d.` : "Aktivan";
+        const timeStr = new Date(need.created_at).toLocaleDateString('hr-HR');
 
         const card = document.createElement('div');
         card.className = 'need-card';
@@ -126,8 +122,8 @@ function renderNeeds(needs) {
                     ${isAbroad ? '<span class="abroad-tag">Inozemstvo</span>' : ''}
                 </div>
                 <div class="meta-info">
-                    <span class="expiry-tag">${expiryText}</span>
-                    <span class="time-stamp">${need.created_at}</span>
+                    <span class="expiry-tag">Aktivan</span>
+                    <span class="time-stamp">${timeStr}</span>
                 </div>
             </div>
             <h3>${need.title}</h3>
@@ -137,7 +133,7 @@ function renderNeeds(needs) {
                     <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
                     <span>${distanceStr}</span>
                 </div>
-                <button class="respond-btn" onclick="handleRespond(${need.id})">Javi se</button>
+                <button class="respond-btn" onclick="handleRespond('${need.id}')">Javi se</button>
             </div>
         `;
         needsList.appendChild(card);
@@ -163,29 +159,42 @@ function initNavigation() {
 // Form Logic
 function initForm() {
     if (!postForm) return;
-    postForm.addEventListener('submit', (e) => {
+    postForm.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const newNeed = {
-            id: Date.now(),
-            title: document.getElementById('title').value,
-            category: document.getElementById('category').value,
-            description: document.getElementById('description').value,
-            expiry_days: document.getElementById('expiry').value,
-            lat: currentUserLocation ? currentUserLocation.lat : 45.815,
-            lon: currentUserLocation ? currentUserLocation.lon : 15.981,
-            country: currentUserLocation ? currentUserLocation.country : 'hr',
-            created_at: "Upravo sada"
-        };
-        MOCK_NEEDS.unshift(newNeed);
+        
         const btn = postForm.querySelector('.submit-btn');
+        btn.innerText = "Objavljujem...";
+        btn.disabled = true;
+
+        const { error } = await supabase
+            .from('oglasi')
+            .insert([{
+                title: document.getElementById('title').value,
+                category: document.getElementById('category').value,
+                description: document.getElementById('description').value,
+                lat: currentUserLocation ? currentUserLocation.lat : null,
+                lon: currentUserLocation ? currentUserLocation.lon : null,
+                country_code: currentUserLocation ? currentUserLocation.country : 'hr'
+            }]);
+
+        if (error) {
+            console.error('Error saving oglas:', error);
+            btn.innerText = "Greška!";
+            btn.style.background = "#ef4444";
+            btn.disabled = false;
+            return;
+        }
+
         btn.innerText = "Objavljeno! 🎉";
         btn.style.background = "#22c55e";
+        
         setTimeout(() => {
             btn.innerText = "Objavi oglas";
             btn.style.background = "var(--primary)";
+            btn.disabled = false;
             postForm.reset();
             document.querySelector('[data-screen="feed-screen"]').click();
-            renderNeeds(MOCK_NEEDS);
+            fetchNeeds();
         }, 1500);
     });
 }
@@ -201,8 +210,5 @@ function registerSW() {
 
 // Global Handlers
 window.handleRespond = (id) => {
-    const need = MOCK_NEEDS.find(n => n.id === id);
-    alert(`Kontaktiranje za: "${need.title}"`);
+    alert(`Kontaktiranje za oglas: ${id}\n(Sustav poruka je sljedeći korak!)`);
 };
-
-window.detectLocation = detectLocation;
