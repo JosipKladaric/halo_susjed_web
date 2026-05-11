@@ -3,6 +3,27 @@ const supabaseUrl = 'https://edzldzjwogwzmekqvape.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkemxkemp3b2d3em1la3F2YXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDk5NTUsImV4cCI6MjA5MzgyNTk1NX0.k11qcVKTar0rlYtP15whBwaF2USg6gJ63hRa-2VGs7g';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
+// ---------- Local Auth Helpers ----------
+// Stores users as: { "ime.prezime": { ime, prezime, sifra, id } }
+function generateUUID() {
+    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
+}
+function getLocalUsers() {
+    return JSON.parse(localStorage.getItem('hs_users') || '{}');
+}
+function saveLocalUsers(users) {
+    localStorage.setItem('hs_users', JSON.stringify(users));
+}
+function getLocalSession() {
+    return JSON.parse(localStorage.getItem('hs_session') || 'null');
+}
+function saveLocalSession(user) {
+    localStorage.setItem('hs_session', user ? JSON.stringify(user) : 'null');
+}
+// ----------------------------------------
+
 // Global State
 let currentUserLocation = null;
 let currentUser = null;
@@ -14,19 +35,13 @@ const needsList = document.getElementById('needs-list');
 const postForm = document.getElementById('post-form');
 
 // App Initialization
-document.addEventListener('DOMContentLoaded', async () => {
+document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
-    initAuthTabs();
-    initAuthForms();
-    
-    // Check current auth session
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    handleAuthStateChange(session);
+    initAuth();
 
-    // Listen for auth changes
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
-        handleAuthStateChange(session);
-    });
+    // Restore local session
+    const session = getLocalSession();
+    handleAuthStateChange(session);
 
     fetchNeeds();
     registerSW();
@@ -34,82 +49,133 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 // Auth Logic
-function handleAuthStateChange(session) {
-    currentUser = session?.user || null;
+function handleAuthStateChange(user) {
+    currentUser = user;
     const authView = document.getElementById('auth-view');
     const userView = document.getElementById('user-view');
-    const addNavBtn = document.querySelector('[data-screen="add-screen"]');
+    const addNavBtn = document.getElementById('nav-add');
+    const navAuthBtn = document.getElementById('nav-auth');
+    const navAuthLabel = document.getElementById('nav-auth-label');
+    const iconLogin = document.getElementById('nav-auth-icon-login');
+    const iconMsg = document.getElementById('nav-auth-icon-msg');
 
     if (currentUser) {
         if (authView) authView.style.display = 'none';
         if (userView) userView.style.display = 'block';
         if (addNavBtn) addNavBtn.style.display = 'flex';
-        
-        document.getElementById('user-display-name').innerText = currentUser.user_metadata.full_name || 'Korisnik';
-        document.getElementById('user-display-email').innerText = currentUser.email;
-        
-        initRealtime(); // Start listening for messages
+
+        document.getElementById('user-display-name').innerText =
+            `${currentUser.ime} ${currentUser.prezime}`;
+        const handleEl = document.getElementById('user-display-handle');
+        if (handleEl) handleEl.innerText = `@${currentUser.ime.toLowerCase()}.${currentUser.prezime.toLowerCase()}`;
+
+        // Switch 3rd nav button to Poruke
+        if (navAuthBtn) navAuthBtn.setAttribute('data-screen', 'messages-screen');
+        if (navAuthLabel) navAuthLabel.innerText = 'Poruke';
+        if (iconLogin) iconLogin.style.display = 'none';
+        if (iconMsg) iconMsg.style.display = 'block';
+
+        initRealtime();
     } else {
         if (authView) authView.style.display = 'block';
         if (userView) userView.style.display = 'none';
-        if (addNavBtn) addNavBtn.style.display = 'none'; // Hide "Add" for guests
+        if (addNavBtn) addNavBtn.style.display = 'none';
+
+        // Switch 3rd nav button back to Priključi se
+        if (navAuthBtn) navAuthBtn.setAttribute('data-screen', 'profile-screen');
+        if (navAuthLabel) navAuthLabel.innerText = 'Priključi se';
+        if (iconLogin) iconLogin.style.display = 'block';
+        if (iconMsg) iconMsg.style.display = 'none';
     }
-    
-    // Re-render feed to show/hide "Respond" buttons correctly
+
     fetchNeeds();
 }
 
-function initAuthTabs() {
-    const tabs = document.querySelectorAll('.auth-tab-btn');
-    const forms = document.querySelectorAll('.auth-form');
-
-    tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            tabs.forEach(t => t.classList.remove('active'));
-            forms.forEach(f => f.classList.remove('active'));
-            
-            tab.classList.add('active');
-            document.getElementById(tab.getAttribute('data-tab')).classList.add('active');
-        });
-    });
+function showAuthError(msg) {
+    const el = document.getElementById('auth-error');
+    if (!el) return;
+    el.textContent = msg;
+    el.style.display = 'block';
+    setTimeout(() => { el.style.display = 'none'; }, 3500);
 }
 
-function initAuthForms() {
-    const loginForm = document.getElementById('login-form');
-    const registerForm = document.getElementById('register-form');
+function initAuth() {
+    const btnPrijava = document.getElementById('btn-prijava');
+    const btnRegistracija = document.getElementById('btn-registracija');
     const logoutBtn = document.getElementById('logout-btn');
 
-    if (loginForm) {
-        loginForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            
-            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
-            if (error) alert(error.message);
+    if (btnPrijava) {
+        btnPrijava.addEventListener('click', () => {
+            const ime = document.getElementById('auth-ime').value.trim();
+            const prezime = document.getElementById('auth-prezime').value.trim();
+            const sifra = document.getElementById('auth-sifra').value;
+
+            if (!ime || !prezime || !sifra) {
+                showAuthError('Ispunite sva polja.');
+                return;
+            }
+
+            const key = `${ime.toLowerCase()}.${prezime.toLowerCase()}`;
+            const users = getLocalUsers();
+
+            if (!users[key]) {
+                showAuthError('Korisnik nije pronađen. Registrirajte se.');
+                return;
+            }
+            if (users[key].sifra !== sifra) {
+                showAuthError('Pogrešna šifra.');
+                return;
+            }
+
+            const user = { ime, prezime };
+            saveLocalSession(user);
+            handleAuthStateChange(user);
+
+            // Navigate to feed
+            document.getElementById('nav-feed').click();
         });
     }
 
-    if (registerForm) {
-        registerForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('reg-email').value;
-            const password = document.getElementById('reg-password').value;
-            const full_name = document.getElementById('reg-name').value;
-            
-            const { error } = await supabaseClient.auth.signUp({
-                email,
-                password,
-                options: { data: { full_name } }
-            });
-            
-            if (error) alert(error.message);
-            else alert('Provjerite email za potvrdu registracije!');
+    if (btnRegistracija) {
+        btnRegistracija.addEventListener('click', () => {
+            const ime = document.getElementById('auth-ime').value.trim();
+            const prezime = document.getElementById('auth-prezime').value.trim();
+            const sifra = document.getElementById('auth-sifra').value;
+
+            if (!ime || !prezime || !sifra) {
+                showAuthError('Ispunite sva polja.');
+                return;
+            }
+            if (sifra.length < 4) {
+                showAuthError('Šifra mora imati najmanje 4 znaka.');
+                return;
+            }
+
+            const key = `${ime.toLowerCase()}.${prezime.toLowerCase()}`;
+            const users = getLocalUsers();
+
+            if (users[key]) {
+                showAuthError('Korisnik već postoji. Prijavite se.');
+                return;
+            }
+
+            users[key] = { ime, prezime, sifra };
+            saveLocalUsers(users);
+
+            const user = { ime, prezime };
+            saveLocalSession(user);
+            handleAuthStateChange(user);
+
+            // Navigate to feed
+            document.getElementById('nav-feed').click();
         });
     }
 
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => supabaseClient.auth.signOut());
+        logoutBtn.addEventListener('click', () => {
+            saveLocalSession(null);
+            handleAuthStateChange(null);
+        });
     }
 }
 
