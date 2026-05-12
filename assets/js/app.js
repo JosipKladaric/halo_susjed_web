@@ -24,11 +24,18 @@ function transliterate(text) {
     return text.split('').map(char => map[char] || char).join('');
 }
 
-function buildEmail(ime, prezime) {
+function buildEmail(ime, prezime, suffix = "") {
     const cleanIme = transliterate(ime.trim().toLowerCase()).replace(/\s+/g, '');
     const cleanPrezime = transliterate(prezime.trim().toLowerCase()).replace(/\s+/g, '');
-    const randomId = Math.floor(1000 + Math.random() * 9000); // Add 4 digits for uniqueness
-    return `${cleanIme}.${cleanPrezime}.${randomId}@halosusjed.app`;
+    return `${cleanIme}.${cleanPrezime}${suffix ? '.' + suffix : ''}@halosusjed.app`;
+}
+
+async function getPasswordSuffix(password) {
+    const msgUint8 = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex.substring(0, 4); // Take first 4 chars for uniqueness
 }
 
 // App Initialization
@@ -177,10 +184,24 @@ function initAuth() {
             btnPrijava.disabled = true;
             btnPrijava.textContent = 'Prijavljujem...';
 
-            const { error } = await supabaseClient.auth.signInWithPassword({
-                email: buildEmail(ime, prezime),
+            const suffix = await getPasswordSuffix(sifra);
+            const userEmailWithHash = buildEmail(ime, prezime, suffix);
+            const userEmailOld = buildEmail(ime, prezime);
+
+            // First attempt: try with hashed email (new users)
+            let { error } = await supabaseClient.auth.signInWithPassword({
+                email: userEmailWithHash,
                 password: sifra
             });
+
+            // Second attempt: fallback to old email (old users)
+            if (error) {
+                const secondAttempt = await supabaseClient.auth.signInWithPassword({
+                    email: userEmailOld,
+                    password: sifra
+                });
+                error = secondAttempt.error;
+            }
 
             btnPrijava.disabled = false;
             btnPrijava.textContent = 'Prijava';
@@ -212,7 +233,10 @@ function initAuth() {
             btnRegistracija.disabled = true;
             btnRegistracija.textContent = 'Registriram...';
 
-            const userEmail = buildEmail(ime, prezime);
+            // For registration, we add a hash suffix of the password to handle same-named users deterministically
+            const suffix = await getPasswordSuffix(sifra);
+            const userEmail = buildEmail(ime, prezime, suffix);
+            
             const { data: signUpData, error } = await supabaseClient.auth.signUp({
                 email: userEmail,
                 password: sifra,
