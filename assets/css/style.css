@@ -204,6 +204,16 @@ h1 span { color: var(--primary); }
     cursor: pointer;
 }
 
+.my-post-badge {
+    background: #f1f5f9;
+    color: var(--text-muted);
+    padding: 0.5rem 0.75rem;
+    border-radius: 10px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border: 1px dashed #cbd5e1;
+}
+
 /* Form Styles */
 .screen-header {
     margin-bottom: 2rem;
@@ -578,10 +588,14 @@ h1 span { color: var(--primary); }
 
 .chat-bubble {
     max-width: 85%;
-    padding: 10px 14px;
+    padding: 8px 12px;
     border-radius: 18px;
     font-size: 0.95rem;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: var(--shadow-sm);
 }
 
 .chat-bubble.sent {
@@ -598,11 +612,35 @@ h1 span { color: var(--primary); }
     border-bottom-left-radius: 4px;
 }
 
+.bubble-name {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    opacity: 0.85;
+}
+
+.chat-bubble.sent .bubble-name {
+    text-align: right;
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.chat-bubble.received .bubble-name {
+    color: var(--primary);
+}
+
+.bubble-text {
+    line-height: 1.4;
+    word-break: break-word;
+}
+
 .bubble-time {
-    font-size: 0.7rem;
-    opacity: 0.8;
-    display: block;
-    margin-top: 4px;
+    font-size: 0.6rem;
+    opacity: 0.7;
+    margin-top: 2px;
+}
+
+.chat-bubble.sent .bubble-time {
     text-align: right;
 }
 

@@ -16,8 +16,19 @@ let realtimeChannel = null;
 let activeConversationAdId = null;
 
 // Helper: constructs a Supabase-compatible email
+function transliterate(text) {
+    const map = {
+        'č': 'c', 'ć': 'c', 'ž': 'z', 'š': 's', 'đ': 'd',
+        'Č': 'C', 'Ć': 'C', 'Ž': 'Z', 'Š': 'S', 'Đ': 'D'
+    };
+    return text.split('').map(char => map[char] || char).join('');
+}
+
 function buildEmail(ime, prezime) {
-    return `${ime.trim().toLowerCase()}.${prezime.trim().toLowerCase()}@halosusjed.app`;
+    const cleanIme = transliterate(ime.trim().toLowerCase()).replace(/\s+/g, '');
+    const cleanPrezime = transliterate(prezime.trim().toLowerCase()).replace(/\s+/g, '');
+    const randomId = Math.floor(1000 + Math.random() * 9000); // Add 4 digits for uniqueness
+    return `${cleanIme}.${cleanPrezime}.${randomId}@halosusjed.app`;
 }
 
 // App Initialization
@@ -59,7 +70,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     detectLocation();
     registerSW();
+    initSearch();
 });
+
+// Search Logic
+function initSearch() {
+    const searchInput = document.getElementById('search-input');
+    if (!searchInput) return;
+
+    searchInput.addEventListener('input', (e) => {
+        const term = e.target.value.toLowerCase().trim();
+        filterNeeds(term);
+    });
+}
+
+let allNeeds = []; // Cache for filtering
+
+function filterNeeds(term) {
+    if (!term) {
+        renderNeeds(allNeeds);
+        return;
+    }
+    const filtered = allNeeds.filter(need => 
+        need.description.toLowerCase().includes(term) || 
+        (need.poster_name && need.poster_name.toLowerCase().includes(term)) ||
+        (need.location_name && need.location_name.toLowerCase().includes(term))
+    );
+    renderNeeds(filtered, true); // true means we are filtering
+}
 
 // Auth Logic
 function handleAuthStateChange(user) {
@@ -259,11 +297,12 @@ async function fetchNeeds() {
         .order('created_at', { ascending: false });
 
     if (error) return;
+    allNeeds = data; // Cache for search
     renderNeeds(data);
 }
 
 // Rendering Logic
-function renderNeeds(needs) {
+function renderNeeds(needs, isFiltering = false) {
     const needsList = document.getElementById('needs-list');
     if (!needsList) return;
     needsList.innerHTML = '';
@@ -318,7 +357,11 @@ function renderNeeds(needs) {
                 <div class="time-info">
                     ${new Date(need.created_at).toLocaleDateString('hr-HR')}
                 </div>
-                ${currentUser ? `<button class="respond-btn" onclick="handleRespond('${need.id}', '${need.user_id}', '${need.description}')">Javi se</button>` : ''}
+                ${currentUser ? 
+                    (need.user_id === currentUser.id ? 
+                        `<span class="my-post-badge">Moja objava</span>` : 
+                        `<button class="respond-btn" onclick="handleRespond('${need.id}', '${need.user_id}', '${need.description.replace(/'/g, "\\'")}')">Javi se</button>`
+                    ) : ''}
             </div>
         `;
         needsList.appendChild(card);
@@ -364,14 +407,24 @@ async function fetchUserAds() {
 
 window.deleteAd = async (adId) => {
     if (!confirm('Želite li ugasiti ovaj oglas?')) return;
+    
+    // Set expiry to 'now' to effectively expire the ad
     const now = new Date().toISOString();
     const { error } = await supabaseClient
         .from('oglasi')
         .update({ expires_at: now })
-        .eq('id', adId);
+        .eq('id', adId)
+        .eq('user_id', currentUser.id);
 
-    if (error) alert('Greška pri brisanju.');
-    else { fetchUserAds(); fetchNeeds(); }
+    if (error) {
+        console.error("Expire error:", error);
+        alert('Greška pri gašenju oglasa. Provjerite jeste li vlasnik.');
+    } else { 
+        // Force refresh both views
+        await fetchUserAds(); 
+        await fetchNeeds(); 
+        alert('Oglas je uspješno ugašen.');
+    }
 };
 
 // Navigation
@@ -495,7 +548,8 @@ window.handleRespond = (adId, receiverId, adDescription) => {
                 oglas_id: adId,
                 sender_id: currentUser.id,
                 receiver_id: receiverId,
-                content: content
+                content: content,
+                sender_name: currentUser.user_metadata?.full_name || 'Susjed'
             }]);
 
         if (error) alert('Greška pri slanju.');
@@ -524,6 +578,7 @@ async function fetchMessages() {
 
     const now = new Date();
     const conversations = {};
+    
     data.forEach(msg => {
         const oglas = msg.oglas_id;
         if (!oglas) return;
@@ -532,27 +587,39 @@ async function fetchMessages() {
         const cutoffDate = new Date(expiryDate.getTime() + (24 * 60 * 60 * 1000));
         if (now > cutoffDate) return;
 
-        const oglasId = oglas.id;
-        if (!conversations[oglasId]) {
-            // Find the other person in this conversation
-            // If the user is the owner, they talk to the person who responded
-            // We need to group by (oglasId + otherUser) if multiple people respond to one ad
-            // For simplicity, we group by OglasId for now.
-            
-            conversations[oglasId] = {
+        // Identify the "other" person in this chat
+        // One person is ALWAYS the ad owner. The other is the 'responder'.
+        const otherUserId = (msg.sender_id === currentUser.id) ? msg.receiver_id : msg.sender_id;
+        
+        // Use a composite key to separate conversations by ad AND person
+        const convKey = `${oglas.id}_${otherUserId}`;
+
+        if (!conversations[convKey]) {
+            conversations[convKey] = {
                 title: oglas.description,
-                adId: oglasId,
+                adId: oglas.id,
                 adOwnerId: oglas.user_id,
+                otherUserId: otherUserId,
                 messages: [],
                 lastMsg: msg.content,
                 time: msg.created_at
             };
         }
-        conversations[oglasId].messages.push(msg);
+        conversations[convKey].messages.push(msg);
     });
 
-    if (activeConversationAdId && conversations[activeConversationAdId]) {
-        renderChatThread(conversations[activeConversationAdId]);
+    // If we are already in a thread, find it in the new grouping
+    if (activeConversationAdId) {
+        // activeConversationAdId was previously just the oglasId. 
+        // Now it needs to be the convKey.
+        // Let's check if activeConversationAdId matches any convKey
+        const currentConv = conversations[activeConversationAdId];
+        if (currentConv) {
+            renderChatThread(currentConv);
+        } else {
+            // If not found (maybe first load or back button), show list
+            renderConversations(conversations);
+        }
     } else {
         renderConversations(conversations);
     }
@@ -566,8 +633,11 @@ function renderConversations(conversations) {
     }
 
     messagesList.innerHTML = '';
-    Object.keys(conversations).forEach(id => {
-        const conv = conversations[id];
+    // Sort conversations by most recent message
+    const sortedConvs = Object.values(conversations).sort((a, b) => new Date(b.time) - new Date(a.time));
+
+    sortedConvs.forEach(conv => {
+        const convKey = `${conv.adId}_${conv.otherUserId}`;
         const card = document.createElement('div');
         card.className = 'conversation-card';
         card.innerHTML = `
@@ -576,7 +646,7 @@ function renderConversations(conversations) {
             <p class="conv-last-msg">${conv.lastMsg}</p>
         `;
         card.onclick = () => {
-            activeConversationAdId = id;
+            activeConversationAdId = convKey;
             renderChatThread(conv);
         };
         messagesList.appendChild(card);
@@ -613,9 +683,18 @@ function renderChatThread(conv) {
         const isSender = msg.sender_id === currentUser.id;
         const bubble = document.createElement('div');
         bubble.className = `chat-bubble ${isSender ? 'sent' : 'received'}`;
+        
+        const timeStr = new Date(msg.created_at).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+        const dateStr = new Date(msg.created_at).toLocaleDateString('hr-HR', { day: 'numeric', month: 'short' });
+        
+        // Show date only if it's not today (simplified check)
+        const isToday = new Date(msg.created_at).toDateString() === new Date().toDateString();
+        const displayTime = isToday ? timeStr : `${dateStr}, ${timeStr}`;
+
         bubble.innerHTML = `
-            ${msg.content}
-            <span class="bubble-time">${new Date(msg.created_at).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}</span>
+            <div class="bubble-name">${isSender ? 'Ja' : (msg.sender_name || 'Susjed')}</div>
+            <div class="bubble-text">${msg.content}</div>
+            <span class="bubble-time">${displayTime}</span>
         `;
         scroller.appendChild(bubble);
     });
@@ -630,16 +709,8 @@ function renderChatThread(conv) {
         const content = replyInput.value.trim();
         if (!content) return;
 
-        // Determine receiver:
-        // If I am the owner, receiver is the OTHER person in the last message
-        // For simplicity: receiver is the person who sent me the last message, 
-        // OR the owner if I am the one who responded first.
-        let receiverId = conv.adOwnerId;
-        if (currentUser.id === conv.adOwnerId) {
-            // If I am the owner, find the first message from someone else
-            const otherMsg = conv.messages.find(m => m.sender_id !== currentUser.id);
-            if (otherMsg) receiverId = otherMsg.sender_id;
-        }
+        // Receiver is always the "other" person in this conversation
+        const receiverId = conv.otherUserId;
 
         const { error } = await supabaseClient
             .from('poruke')
@@ -647,12 +718,15 @@ function renderChatThread(conv) {
                 oglas_id: conv.adId,
                 sender_id: currentUser.id,
                 receiver_id: receiverId,
-                content: content
+                content: content,
+                sender_name: currentUser.user_metadata?.full_name || 'Susjed'
             }]);
 
         if (!error) {
             replyInput.value = '';
-            fetchMessages(); // Refresh chat
+            // Optimization: instead of fetching everything, we could just wait for realtime
+            // but fetchMessages is safer for now.
+            fetchMessages(); 
         }
     };
 }
