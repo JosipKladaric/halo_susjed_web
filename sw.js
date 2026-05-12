@@ -1,4 +1,4 @@
-const CACHE_NAME = 'halo-susjed-v3';
+const CACHE_NAME = 'halo-susjed-v4';
 const ASSETS = [
   '/',
   '/index.html',
@@ -10,6 +10,7 @@ const ASSETS = [
 
 // Install event - caching local assets
 self.addEventListener('install', (event) => {
+  self.skipWaiting(); // Force update to become active immediately
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
@@ -17,29 +18,29 @@ self.addEventListener('install', (event) => {
   );
 });
 
-// Fetch event - better handling of cross-origin requests
+// Fetch event
 self.addEventListener('fetch', (event) => {
-  // Skip caching for non-GET requests (like Supabase POST/INSERT)
   if (event.request.method !== 'GET') return;
 
   event.respondWith(
     caches.match(event.request).then((response) => {
-      // Return cached asset if found, otherwise fetch from network
       return response || fetch(event.request).catch(() => {
-        // Fallback if network fails and not in cache
         console.log('Network fetch failed for:', event.request.url);
       });
     })
   );
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches and take control
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
-      );
-    })
+    Promise.all([
+      self.clients.claim(), // Take control of all clients immediately
+      caches.keys().then((keys) => {
+        return Promise.all(
+          keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+        );
+      })
+    ])
   );
 });

@@ -1,7 +1,14 @@
 // Supabase Configuration
 const supabaseUrl = 'https://edzldzjwogwzmekqvape.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkemxkemp3b2d3em1la3F2YXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDk5NTUsImV4cCI6MjA5MzgyNTk1NX0.k11qcVKTar0rlYtP15whBwaF2USg6gJ63hRa-2VGs7g';
-const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
+    auth: {
+        persistSession: true,
+        autoRefreshToken: true,
+        detectSessionInUrl: true
+    }
+});
 
 // Helper: constructs a Supabase-compatible email from Ime + Prezime
 function buildEmail(ime, prezime) {
@@ -14,14 +21,12 @@ let currentUser = null;
 
 // App Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("App initializing...");
+    console.log("App initializing (v4)...");
     
-    // Initial UI setup
     initNavigation();
     initAuth();
     initForm();
 
-    // Handle the top profile button
     const profileBtn = document.getElementById('profile-btn');
     if (profileBtn) {
         profileBtn.onclick = () => {
@@ -32,21 +37,24 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // Restore existing Supabase session
     try {
-        const { data: { session } } = await supabaseClient.auth.getSession();
+        const { data: { session }, error } = await supabaseClient.auth.getSession();
+        if (error) throw error;
         handleAuthStateChange(session?.user || null);
     } catch (e) {
         console.error("Session restore error:", e);
+        handleAuthStateChange(null);
     }
 
     // Keep UI in sync with auth changes
     supabaseClient.auth.onAuthStateChange((_event, session) => {
-        console.log("Auth state change:", _event, session?.user?.email);
         handleAuthStateChange(session?.user || null);
     });
 
-    fetchNeeds();
-    registerSW();
+    // Start location detection immediately
     detectLocation();
+    
+    // fetchNeeds will be called by detectLocation once location is ready
+    registerSW();
 });
 
 // Auth Logic
@@ -72,7 +80,6 @@ function handleAuthStateChange(user) {
         const handleEl = document.getElementById('user-display-handle');
         if (handleEl) handleEl.innerText = currentUser.email?.replace('@halosusjed.app', '').replace('.', ' ') || '';
 
-        // Switch 3rd nav button to Poruke
         if (navAuthBtn) navAuthBtn.setAttribute('data-screen', 'messages-screen');
         if (navAuthLabel) navAuthLabel.innerText = 'Poruke';
         if (iconLogin) iconLogin.style.display = 'none';
@@ -84,7 +91,6 @@ function handleAuthStateChange(user) {
         if (userView) userView.style.display = 'none';
         if (addNavBtn) addNavBtn.style.display = 'none';
 
-        // Switch 3rd nav button back to Priključi se
         if (navAuthBtn) navAuthBtn.setAttribute('data-screen', 'profile-screen');
         if (navAuthLabel) navAuthLabel.innerText = 'Priključi se';
         if (iconLogin) iconLogin.style.display = 'block';
@@ -169,14 +175,10 @@ function initAuth() {
             btnRegistracija.textContent = 'Registracija';
 
             if (error) {
-                if (error.message.includes('already registered')) {
-                    showAuthError('Korisnik već postoji. Prijavite se.');
-                } else {
-                    showAuthError(error.message);
-                }
+                showAuthError(error.message);
             } else if (signUpData?.user && !signUpData?.session) {
-                showAuthError('Registracija uspješna! Isključite "Confirm email" u Supabase postavkama.');
-                alert('VAŽNO: Supabase zahtijeva potvrdu emaila. Isključite "Confirm email" u Authentication -> Providers -> Email Dashboardu.');
+                showAuthError('Potrebna potvrda emaila!');
+                alert('VAŽNO: Isključite "Confirm email" u Supabase Auth postavkama.');
             } else if (signUpData?.session) {
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
@@ -185,15 +187,15 @@ function initAuth() {
     }
 
     if (logoutBtn) {
-        logoutBtn.onclick = () => supabaseClient.auth.signOut();
+        logoutBtn.onclick = async () => {
+            await supabaseClient.auth.signOut();
+            window.location.reload();
+        };
     }
 }
 
 // Geolocation Logic
 async function detectLocation() {
-    const locationInput = document.getElementById('location');
-    if (!locationInput) return;
-
     if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(async (position) => {
             const { latitude, longitude } = position.coords;
@@ -201,21 +203,27 @@ async function detectLocation() {
                 const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
                 const data = await response.json();
                 
+                const address = data.address || {};
+                const city = address.city || address.town || address.village || address.suburb || "Nepoznato mjesto";
+                
                 currentUserLocation = {
                     lat: latitude,
                     lon: longitude,
-                    country: data.address ? data.address.country_code : 'unknown'
+                    country: address.country_code || 'hr',
+                    name: city
                 };
                 
-                locationInput.value = "📍 Lokacija očitana";
-                locationInput.style.color = "var(--primary)";
-                locationInput.readOnly = true;
-
-                fetchNeeds();
+                console.log("Lokacija očitana:", city);
+                fetchNeeds(); // Now we can fetch needs
             } catch (error) {
                 console.error("Location error:", error);
             }
+        }, (err) => {
+            console.error("Geolocation error:", err);
+            alert("Za korištenje aplikacije morate omogućiti pristup lokaciji.");
         });
+    } else {
+        alert("Vaš preglednik ne podržava geolokaciju.");
     }
 }
 
@@ -234,6 +242,11 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 // Fetch from Supabase
 async function fetchNeeds() {
+    if (!currentUserLocation) {
+        console.log("Čekam lokaciju za dohvat oglasa...");
+        return;
+    }
+
     const needsList = document.getElementById('needs-list');
     if (!needsList) return;
     
@@ -273,43 +286,26 @@ function renderNeeds(needs) {
     }
     
     sortedNeeds.forEach(need => {
-        let distanceStr = "Lokacija nepoznata";
-        let isAbroad = false;
-
+        let distanceStr = "";
         if (currentUserLocation && need.lat && need.lon) {
             const dist = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, need.lat, need.lon);
-            distanceStr = dist < 1 ? `${(dist * 1000).toFixed(0)}m od tebe` : `${dist.toFixed(1)}km od tebe`;
-            isAbroad = currentUserLocation.country !== need.country_code;
+            distanceStr = dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`;
         }
-
-        const expiresAt = new Date(need.expires_at);
-        const now = new Date();
-        const diffMs = expiresAt - now;
-        const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-        const diffDays = Math.floor(diffHours / 24);
-        
-        let expiryText = "";
-        if (diffDays > 0) expiryText = `Istječe za ${diffDays} d.`;
-        else if (diffHours > 0) expiryText = `Istječe za ${diffHours} h.`;
-        else expiryText = "Uskoro istječe";
 
         const card = document.createElement('div');
         card.className = 'need-card';
         card.innerHTML = `
             <div class="card-header">
-                <div class="tags">
-                    <span class="category-tag">${need.category}</span>
-                    ${isAbroad ? '<span class="abroad-tag">Inozemstvo</span>' : ''}
+                <div class="user-meta">
+                    <span class="poster-name">👤 ${need.poster_name || 'Susjed'}</span>
+                    <span class="location-name">📍 ${need.location_name || 'Nepoznato'}</span>
                 </div>
-                <div class="meta-info">
-                    <span class="expiry-tag">${expiryText}</span>
-                </div>
+                <div class="distance-tag">${distanceStr}</div>
             </div>
             <p class="description-text">${need.description}</p>
             <div class="card-footer">
-                <div class="location-info">
-                    <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-                    <span>${distanceStr}</span>
+                <div class="time-info">
+                    ${new Date(need.created_at).toLocaleDateString('hr-HR')}
                 </div>
                 ${currentUser ? `<button class="respond-btn" onclick="handleRespond('${need.id}', '${need.user_id}')">Javi se</button>` : ''}
             </div>
@@ -348,9 +344,15 @@ function initForm() {
         e.preventDefault();
 
         if (!currentUser) {
-            alert('Morate biti prijavljeni da biste objavili oglas.');
+            alert('Morate biti prijavljeni.');
             const navAuth = document.getElementById('nav-auth');
             if (navAuth) navAuth.click();
+            return;
+        }
+
+        if (!currentUserLocation) {
+            alert('Lokacija nije očitana. Molimo pričekajte trenutak ili osvježite stranicu.');
+            detectLocation();
             return;
         }
         
@@ -367,11 +369,11 @@ function initForm() {
             const { error } = await supabaseClient
                 .from('oglasi')
                 .insert([{
-                    category: document.getElementById('category').value,
                     description: document.getElementById('description').value,
-                    lat: currentUserLocation ? currentUserLocation.lat : null,
-                    lon: currentUserLocation ? currentUserLocation.lon : null,
-                    country_code: currentUserLocation ? currentUserLocation.country : 'hr',
+                    lat: currentUserLocation.lat,
+                    lon: currentUserLocation.lon,
+                    country_code: currentUserLocation.country,
+                    location_name: currentUserLocation.name,
                     expires_at: expiresAt.toISOString(),
                     user_id: currentUser.id,
                     poster_name: currentUser.user_metadata?.full_name || 'Susjed'
@@ -396,7 +398,7 @@ function initForm() {
             console.error('Error:', err);
             btn.innerText = "Greška!";
             btn.disabled = false;
-            alert(`Greška: ${err.message}`);
+            alert(`Greška: ${err.message}. Provjerite imate li stupac 'location_name' u tablici 'oglasi'.`);
         }
     };
 }
@@ -404,9 +406,18 @@ function initForm() {
 // SW Registration
 function registerSW() {
     if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-            navigator.serviceWorker.register('/sw.js').catch(console.error);
-        });
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+            reg.addEventListener('updatefound', () => {
+                const newWorker = reg.installing;
+                newWorker.addEventListener('statechange', () => {
+                    if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        if (confirm('Nova verzija aplikacije je dostupna! Želite li osvježiti?')) {
+                            window.location.reload();
+                        }
+                    }
+                });
+            });
+        }).catch(console.error);
     }
 }
 
@@ -461,12 +472,12 @@ async function fetchMessages() {
 
     if (error) return;
 
+    messagesList.innerHTML = '';
     if (data.length === 0) {
-        messagesList.innerHTML = '<p class="empty-state">Još nemaš nijednu poruku.</p>';
+        messagesList.innerHTML = '<p class="empty-state">Još nemaš poruka.</p>';
         return;
     }
 
-    messagesList.innerHTML = '';
     data.forEach(msg => {
         const isSender = msg.sender_id === currentUser.id;
         const card = document.createElement('div');
@@ -496,7 +507,7 @@ function initRealtime() {
             if (document.getElementById('messages-screen').classList.contains('active')) {
                 fetchMessages();
             } else {
-                alert('Primili ste novu poruku! 💬');
+                alert('Nova poruka! 💬');
             }
         })
         .subscribe();
