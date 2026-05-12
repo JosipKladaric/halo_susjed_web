@@ -297,7 +297,7 @@ function renderNeeds(needs) {
         card.innerHTML = `
             <div class="card-header">
                 <div class="user-meta">
-                    <span class="poster-name">👤 ${need.poster_name || 'Susjed'}</span>
+                    <span class="poster-name">👤 ${need.poster_name ? need.poster_name.split(' ')[0] : 'Susjed'}</span>
                     <span class="location-name">📍 ${need.location_name || 'Nepoznato'}</span>
                 </div>
                 <div class="distance-tag">${distanceStr}</div>
