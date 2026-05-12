@@ -3,26 +3,10 @@ const supabaseUrl = 'https://edzldzjwogwzmekqvape.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVkemxkemp3b2d3em1la3F2YXBlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDk5NTUsImV4cCI6MjA5MzgyNTk1NX0.k11qcVKTar0rlYtP15whBwaF2USg6gJ63hRa-2VGs7g';
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-// ---------- Local Auth Helpers ----------
-// Stores users as: { "ime.prezime": { ime, prezime, sifra, id } }
-function generateUUID() {
-    return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
-        (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
-    );
+// Helper: constructs a Supabase-compatible email from Ime + Prezime
+function buildEmail(ime, prezime) {
+    return `${ime.trim().toLowerCase()}.${prezime.trim().toLowerCase()}@halosusjed.app`;
 }
-function getLocalUsers() {
-    return JSON.parse(localStorage.getItem('hs_users') || '{}');
-}
-function saveLocalUsers(users) {
-    localStorage.setItem('hs_users', JSON.stringify(users));
-}
-function getLocalSession() {
-    return JSON.parse(localStorage.getItem('hs_session') || 'null');
-}
-function saveLocalSession(user) {
-    localStorage.setItem('hs_session', user ? JSON.stringify(user) : 'null');
-}
-// ----------------------------------------
 
 // Global State
 let currentUserLocation = null;
@@ -35,14 +19,28 @@ const needsList = document.getElementById('needs-list');
 const postForm = document.getElementById('post-form');
 
 // App Initialization
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initNavigation();
     initAuth();
-    initForm(); // Wire up the post-oglas form
+    initForm();
 
-    // Restore local session
-    const session = getLocalSession();
-    handleAuthStateChange(session);
+    // Handle the top profile button
+    const profileBtn = document.getElementById('profile-btn');
+    if (profileBtn) {
+        profileBtn.addEventListener('click', () => {
+            document.getElementById('nav-auth').click();
+        });
+    }
+
+    // Restore existing Supabase session
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    handleAuthStateChange(session?.user || null);
+
+    // Keep UI in sync with auth changes
+    supabaseClient.auth.onAuthStateChange((_event, session) => {
+        console.log("Auth state change:", _event, session?.user?.email);
+        handleAuthStateChange(session?.user || null);
+    });
 
     fetchNeeds();
     registerSW();
@@ -65,10 +63,10 @@ function handleAuthStateChange(user) {
         if (userView) userView.style.display = 'block';
         if (addNavBtn) addNavBtn.style.display = 'flex';
 
-        document.getElementById('user-display-name').innerText =
-            `${currentUser.ime} ${currentUser.prezime}`;
+        const fullName = currentUser.user_metadata?.full_name || 'Korisnik';
+        document.getElementById('user-display-name').innerText = fullName;
         const handleEl = document.getElementById('user-display-handle');
-        if (handleEl) handleEl.innerText = `@${currentUser.ime.toLowerCase()}.${currentUser.prezime.toLowerCase()}`;
+        if (handleEl) handleEl.innerText = currentUser.email?.replace('@halosusjed.app', '').replace('.', ' ') || '';
 
         // Switch 3rd nav button to Poruke
         if (navAuthBtn) navAuthBtn.setAttribute('data-screen', 'messages-screen');
@@ -106,7 +104,7 @@ function initAuth() {
     const logoutBtn = document.getElementById('logout-btn');
 
     if (btnPrijava) {
-        btnPrijava.addEventListener('click', () => {
+        btnPrijava.addEventListener('click', async () => {
             const ime = document.getElementById('auth-ime').value.trim();
             const prezime = document.getElementById('auth-prezime').value.trim();
             const sifra = document.getElementById('auth-sifra').value;
@@ -116,30 +114,27 @@ function initAuth() {
                 return;
             }
 
-            const key = `${ime.toLowerCase()}.${prezime.toLowerCase()}`;
-            const users = getLocalUsers();
+            btnPrijava.disabled = true;
+            btnPrijava.textContent = 'Prijavljujem...';
 
-            if (!users[key]) {
-                showAuthError('Korisnik nije pronađen. Registrirajte se.');
-                return;
+            const { error } = await supabaseClient.auth.signInWithPassword({
+                email: buildEmail(ime, prezime),
+                password: sifra
+            });
+
+            btnPrijava.disabled = false;
+            btnPrijava.textContent = 'Prijava';
+
+            if (error) {
+                showAuthError('Pogrešno ime, prezime ili šifra.');
+            } else {
+                document.getElementById('nav-feed').click();
             }
-            if (users[key].sifra !== sifra) {
-                showAuthError('Pogrešna šifra.');
-                return;
-            }
-
-            // Load stored id so currentUser.id works with Supabase
-            const user = { ime, prezime, id: users[key].id };
-            saveLocalSession(user);
-            handleAuthStateChange(user);
-
-            // Navigate to feed
-            document.getElementById('nav-feed').click();
         });
     }
 
     if (btnRegistracija) {
-        btnRegistracija.addEventListener('click', () => {
+        btnRegistracija.addEventListener('click', async () => {
             const ime = document.getElementById('auth-ime').value.trim();
             const prezime = document.getElementById('auth-prezime').value.trim();
             const sifra = document.getElementById('auth-sifra').value;
@@ -148,37 +143,49 @@ function initAuth() {
                 showAuthError('Ispunite sva polja.');
                 return;
             }
-            if (sifra.length < 4) {
-                showAuthError('Šifra mora imati najmanje 4 znaka.');
+            if (sifra.length < 6) {
+                showAuthError('Šifra mora imati najmanje 6 znakova.');
                 return;
             }
 
-            const key = `${ime.toLowerCase()}.${prezime.toLowerCase()}`;
-            const users = getLocalUsers();
+            btnRegistracija.disabled = true;
+            btnRegistracija.textContent = 'Registriram...';
 
-            if (users[key]) {
-                showAuthError('Korisnik već postoji. Prijavite se.');
-                return;
+            const userEmail = buildEmail(ime, prezime);
+            const { data: signUpData, error } = await supabaseClient.auth.signUp({
+                email: userEmail,
+                password: sifra,
+                options: {
+                    data: { full_name: `${ime} ${prezime}` }
+                }
+            });
+
+            console.log('SignUp result:', signUpData, error);
+
+            btnRegistracija.disabled = false;
+            btnRegistracija.textContent = 'Registracija';
+
+            if (error) {
+                if (error.message.includes('already registered')) {
+                    showAuthError('Korisnik već postoji. Prijavite se.');
+                } else {
+                    showAuthError(error.message);
+                }
+            } else if (signUpData?.user && !signUpData?.session) {
+                // User created but needs confirmation OR confirmation is on
+                showAuthError('Registracija uspješna! ALI: Isključite "Confirm email" u Supabase postavkama (Authentication -> Providers -> Email).');
+                alert('VAŽNO: Supabase zahtijeva potvrdu emaila. Korisnik je kreiran, ali se ne može prijaviti dok ne potvrdite email ili isključite tu opciju u Dashboardu.');
+            } else if (signUpData?.session) {
+                // Success and logged in
+                document.getElementById('nav-feed').click();
+            } else {
+                showAuthError('Nešto je pošlo po krivu pri registraciji.');
             }
-
-            const newId = generateUUID();
-            users[key] = { ime, prezime, sifra, id: newId };
-            saveLocalUsers(users);
-
-            const user = { ime, prezime, id: newId };
-            saveLocalSession(user);
-            handleAuthStateChange(user);
-
-            // Navigate to feed
-            document.getElementById('nav-feed').click();
         });
     }
 
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => {
-            saveLocalSession(null);
-            handleAuthStateChange(null);
-        });
+        logoutBtn.addEventListener('click', () => supabaseClient.auth.signOut());
     }
 }
 
@@ -333,12 +340,18 @@ function initNavigation() {
 }
 
 // Form Logic
-function initForm() {
     if (!postForm) return;
     postForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        if (!currentUser) {
+            alert('Morate biti prijavljeni da biste objavili oglas.');
+            document.getElementById('nav-auth').click();
+            return;
+        }
         
         const btn = postForm.querySelector('.submit-btn');
+        const originalText = btn.innerText;
         btn.innerText = "Objavljujem...";
         btn.disabled = true;
 
@@ -346,37 +359,48 @@ function initForm() {
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + days);
 
-        const { error } = await supabaseClient
-            .from('oglasi')
-            .insert([{
-                category: document.getElementById('category').value,
-                description: document.getElementById('description').value,
-                lat: currentUserLocation ? currentUserLocation.lat : null,
-                lon: currentUserLocation ? currentUserLocation.lon : null,
-                country_code: currentUserLocation ? currentUserLocation.country : 'hr',
-                expires_at: expiresAt.toISOString(),
-                user_id: currentUser.id
-            }]);
+        try {
+            const { error } = await supabaseClient
+                .from('oglasi')
+                .insert([{
+                    category: document.getElementById('category').value,
+                    description: document.getElementById('description').value,
+                    lat: currentUserLocation ? currentUserLocation.lat : null,
+                    lon: currentUserLocation ? currentUserLocation.lon : null,
+                    country_code: currentUserLocation ? currentUserLocation.country : 'hr',
+                    expires_at: expiresAt.toISOString(),
+                    user_id: currentUser.id,
+                    poster_name: currentUser.user_metadata?.full_name || 'Susjed'
+                }]);
 
-        if (error) {
-            console.error('Error saving oglas:', error);
-            btn.innerText = "Greška!";
+            if (error) {
+                console.error('Supabase Error:', error);
+                throw error;
+            }
+
+            btn.innerText = "Objavljeno! 🎉";
+            btn.style.background = "#22c55e";
+            
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = "var(--primary)";
+                btn.disabled = false;
+                postForm.reset();
+                document.getElementById('nav-feed').click();
+                fetchNeeds();
+            }, 1500);
+
+        } catch (err) {
+            console.error('Detailed Error:', err);
+            btn.innerText = "Greška (RLS?)";
             btn.style.background = "#ef4444";
             btn.disabled = false;
-            return;
+            alert(`Greška pri spremanju: ${err.message || 'Provjerite Supabase RLS politike za tablicu oglasi.'}`);
+            setTimeout(() => {
+                btn.innerText = originalText;
+                btn.style.background = "var(--primary)";
+            }, 3000);
         }
-
-        btn.innerText = "Objavljeno! 🎉";
-        btn.style.background = "#22c55e";
-        
-        setTimeout(() => {
-            btn.innerText = "Objavi oglas";
-            btn.style.background = "var(--primary)";
-            btn.disabled = false;
-            postForm.reset();
-            document.getElementById('nav-feed').click();
-            fetchNeeds();
-        }, 1500);
     });
 }
 
