@@ -5,23 +5,24 @@ const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey, {
     auth: {
         persistSession: true,
-        autoRefreshToken: true,
-        detectSessionInUrl: true
+        autoRefreshToken: true
     }
 });
-
-// Helper: constructs a Supabase-compatible email from Ime + Prezime
-function buildEmail(ime, prezime) {
-    return `${ime.trim().toLowerCase()}.${prezime.trim().toLowerCase()}@halosusjed.app`;
-}
 
 // Global State
 let currentUserLocation = null;
 let currentUser = null;
+let realtimeChannel = null;
+let activeConversationAdId = null;
+
+// Helper: constructs a Supabase-compatible email
+function buildEmail(ime, prezime) {
+    return `${ime.trim().toLowerCase()}.${prezime.trim().toLowerCase()}@halosusjed.app`;
+}
 
 // App Initialization
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("App initializing (v4)...");
+    console.log("App initializing (v6)...");
     
     initNavigation();
     initAuth();
@@ -35,31 +36,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    // Restore existing Supabase session
-    try {
-        const { data: { session }, error } = await supabaseClient.auth.getSession();
-        if (error) throw error;
-        handleAuthStateChange(session?.user || null);
-    } catch (e) {
-        console.error("Session restore error:", e);
-        handleAuthStateChange(null);
+    const profilePostBtn = document.getElementById('profile-post-btn');
+    if (profilePostBtn) {
+        profilePostBtn.onclick = () => {
+            const navAdd = document.getElementById('nav-add');
+            if (navAdd) navAdd.click();
+        };
     }
 
-    // Keep UI in sync with auth changes
-    supabaseClient.auth.onAuthStateChange((_event, session) => {
+    supabaseClient.auth.onAuthStateChange((event, session) => {
         handleAuthStateChange(session?.user || null);
     });
 
-    // Start location detection immediately
     detectLocation();
-    
-    // fetchNeeds will be called by detectLocation once location is ready
     registerSW();
 });
 
 // Auth Logic
 function handleAuthStateChange(user) {
+    const isNewUser = (!currentUser && user) || (currentUser?.id !== user?.id);
     currentUser = user;
+    
     const authView = document.getElementById('auth-view');
     const userView = document.getElementById('user-view');
     const addNavBtn = document.getElementById('nav-add');
@@ -85,7 +82,8 @@ function handleAuthStateChange(user) {
         if (iconLogin) iconLogin.style.display = 'none';
         if (iconMsg) iconMsg.style.display = 'block';
 
-        initRealtime();
+        if (isNewUser) initRealtime();
+        fetchUserAds();
     } else {
         if (authView) authView.style.display = 'block';
         if (userView) userView.style.display = 'none';
@@ -95,6 +93,11 @@ function handleAuthStateChange(user) {
         if (navAuthLabel) navAuthLabel.innerText = 'Priključi se';
         if (iconLogin) iconLogin.style.display = 'block';
         if (iconMsg) iconMsg.style.display = 'none';
+        
+        if (realtimeChannel) {
+            supabaseClient.removeChannel(realtimeChannel);
+            realtimeChannel = null;
+        }
     }
 
     fetchNeeds();
@@ -178,7 +181,6 @@ function initAuth() {
                 showAuthError(error.message);
             } else if (signUpData?.user && !signUpData?.session) {
                 showAuthError('Potrebna potvrda emaila!');
-                alert('VAŽNO: Isključite "Confirm email" u Supabase Auth postavkama.');
             } else if (signUpData?.session) {
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
@@ -189,7 +191,6 @@ function initAuth() {
     if (logoutBtn) {
         logoutBtn.onclick = async () => {
             await supabaseClient.auth.signOut();
-            window.location.reload();
         };
     }
 }
@@ -213,17 +214,11 @@ async function detectLocation() {
                     name: city
                 };
                 
-                console.log("Lokacija očitana:", city);
-                fetchNeeds(); // Now we can fetch needs
+                fetchNeeds();
             } catch (error) {
                 console.error("Location error:", error);
             }
-        }, (err) => {
-            console.error("Geolocation error:", err);
-            alert("Za korištenje aplikacije morate omogućiti pristup lokaciji.");
         });
-    } else {
-        alert("Vaš preglednik ne podržava geolokaciju.");
     }
 }
 
@@ -242,10 +237,7 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 // Fetch from Supabase
 async function fetchNeeds() {
-    if (!currentUserLocation) {
-        console.log("Čekam lokaciju za dohvat oglasa...");
-        return;
-    }
+    if (!currentUserLocation) return;
 
     const needsList = document.getElementById('needs-list');
     if (!needsList) return;
@@ -257,11 +249,7 @@ async function fetchNeeds() {
         .gt('expires_at', now)
         .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching needs:', error);
-        return;
-    }
-
+    if (error) return;
     renderNeeds(data);
 }
 
@@ -276,16 +264,30 @@ function renderNeeds(needs) {
         return;
     }
 
-    let sortedNeeds = [...needs];
+    let displayNeeds = [...needs];
+    
+    // Filter by distance (50km)
     if (currentUserLocation) {
-        sortedNeeds.sort((a, b) => {
+        displayNeeds = displayNeeds.filter(need => {
+            if (!need.lat || !need.lon) return true;
+            const dist = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, need.lat, need.lon);
+            return dist <= 50;
+        });
+
+        // Sort by distance
+        displayNeeds.sort((a, b) => {
             const distA = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, a.lat, a.lon) || 9999;
             const distB = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, b.lat, b.lon) || 9999;
             return distA - distB;
         });
     }
     
-    sortedNeeds.forEach(need => {
+    if (displayNeeds.length === 0) {
+        needsList.innerHTML = '<div class="empty-state"><p>Nema aktivnih oglasa u krugu od 50km.</p></div>';
+        return;
+    }
+    
+    displayNeeds.forEach(need => {
         let distanceStr = "";
         if (currentUserLocation && need.lat && need.lon) {
             const dist = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, need.lat, need.lon);
@@ -303,16 +305,73 @@ function renderNeeds(needs) {
                 <div class="distance-tag">${distanceStr}</div>
             </div>
             <p class="description-text">${need.description}</p>
+            <div class="reward-badge">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h14v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
+                Zauzvrat: ${need.reward || 'Dogovor'}
+            </div>
             <div class="card-footer">
                 <div class="time-info">
                     ${new Date(need.created_at).toLocaleDateString('hr-HR')}
                 </div>
-                ${currentUser ? `<button class="respond-btn" onclick="handleRespond('${need.id}', '${need.user_id}')">Javi se</button>` : ''}
+                ${currentUser ? `<button class="respond-btn" onclick="handleRespond('${need.id}', '${need.user_id}', '${need.description}')">Javi se</button>` : ''}
             </div>
         `;
         needsList.appendChild(card);
     });
 }
+
+// User Profile Ads Logic
+async function fetchUserAds() {
+    const list = document.getElementById('my-ads-list');
+    if (!list || !currentUser) return;
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabaseClient
+        .from('oglasi')
+        .select('*')
+        .eq('user_id', currentUser.id)
+        .gt('expires_at', now)
+        .order('created_at', { ascending: false });
+
+    if (error) return;
+
+    if (data.length === 0) {
+        list.innerHTML = '<p class="empty-state" style="font-size: 0.85rem;">Trenutno nemate aktivnih oglasa.</p>';
+        return;
+    }
+
+    list.innerHTML = '';
+    data.forEach(ad => {
+        const item = document.createElement('div');
+        item.className = 'my-ad-item';
+        item.innerHTML = `
+            <div class="my-ad-info">
+                <span class="my-ad-desc">${ad.description}</span>
+                <span class="my-ad-expiry">Zauzvrat: ${ad.reward || 'Dogovor'}</span>
+            </div>
+            <button class="my-ad-delete-btn" onclick="deleteAd('${ad.id}')">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+            </button>
+        `;
+        list.appendChild(item);
+    });
+}
+
+window.deleteAd = async (adId) => {
+    if (!confirm('Želite li ugasiti ovaj oglas?')) return;
+    const now = new Date().toISOString();
+    const { error } = await supabaseClient
+        .from('oglasi')
+        .update({ expires_at: now })
+        .eq('id', adId);
+
+    if (error) {
+        alert('Greška pri brisanju oglasa.');
+    } else {
+        fetchUserAds();
+        fetchNeeds();
+    }
+};
 
 // Navigation
 function initNavigation() {
@@ -323,6 +382,9 @@ function initNavigation() {
         item.onclick = () => {
             const targetScreen = item.getAttribute('data-screen');
             if (!targetScreen) return;
+            
+            activeConversationAdId = null;
+            
             navItems.forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
             screens.forEach(screen => {
@@ -330,6 +392,7 @@ function initNavigation() {
                 if (screen.id === targetScreen) {
                     screen.classList.add('active');
                     if (targetScreen === 'messages-screen') fetchMessages();
+                    if (targetScreen === 'profile-screen') fetchUserAds();
                 }
             });
         };
@@ -351,8 +414,7 @@ function initForm() {
         }
 
         if (!currentUserLocation) {
-            alert('Lokacija nije očitana. Molimo pričekajte trenutak ili osvježite stranicu.');
-            detectLocation();
+            alert('Pričekajte očitavanje lokacije...');
             return;
         }
         
@@ -370,6 +432,7 @@ function initForm() {
                 .from('oglasi')
                 .insert([{
                     description: document.getElementById('description').value,
+                    reward: document.getElementById('reward').value,
                     lat: currentUserLocation.lat,
                     lon: currentUserLocation.lon,
                     country_code: currentUserLocation.country,
@@ -398,7 +461,7 @@ function initForm() {
             console.error('Error:', err);
             btn.innerText = "Greška!";
             btn.disabled = false;
-            alert(`Greška: ${err.message}. Provjerite imate li stupac 'location_name' u tablici 'oglasi'.`);
+            alert(`Greška: ${err.message}. Dodajte stupac 'reward' u tablicu 'oglasi'.`);
         }
     };
 }
@@ -422,11 +485,14 @@ function registerSW() {
 }
 
 // Global Handlers
-window.handleRespond = (adId, receiverId) => {
+window.handleRespond = (adId, receiverId, adDescription) => {
     if (!currentUser) return;
     const modal = document.getElementById('message-modal');
+    const adInfo = document.getElementById('modal-ad-info');
     const sendBtn = document.getElementById('send-msg-btn');
     const closeBtn = document.getElementById('close-modal');
+    
+    if (adInfo) adInfo.innerText = `Oglas: "${adDescription}"`;
     
     modal.classList.add('active');
     closeBtn.onclick = () => modal.classList.remove('active');
@@ -459,44 +525,119 @@ window.handleRespond = (adId, receiverId) => {
     };
 };
 
-// Fetch Conversations
+// Fetch Conversations & Messages
 async function fetchMessages() {
     const messagesList = document.getElementById('messages-list');
     if (!messagesList || !currentUser) return;
 
     const { data, error } = await supabaseClient
         .from('poruke')
-        .select(`*, oglas_id (description)`)
+        .select(`*, oglas_id (description, expires_at)`)
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .order('created_at', { ascending: false });
 
     if (error) return;
 
-    messagesList.innerHTML = '';
-    if (data.length === 0) {
-        messagesList.innerHTML = '<p class="empty-state">Još nemaš poruka.</p>';
+    const now = new Date();
+    const conversations = {};
+    data.forEach(msg => {
+        const oglas = msg.oglas_id;
+        if (!oglas) return;
+
+        const expiryDate = new Date(oglas.expires_at);
+        const cutoffDate = new Date(expiryDate.getTime() + (24 * 60 * 60 * 1000));
+        
+        if (now > cutoffDate) return;
+
+        const oglasKey = msg.oglas_id.description || 'Nepoznat oglas';
+        
+        if (!conversations[oglasKey]) {
+            conversations[oglasKey] = {
+                title: oglas.description,
+                messages: [],
+                lastMsg: msg.content,
+                time: msg.created_at
+            };
+        }
+        conversations[oglasKey].messages.push(msg);
+    });
+
+    if (activeConversationAdId) {
+        renderChatThread(conversations[activeConversationAdId]);
+    } else {
+        renderConversations(conversations);
+    }
+}
+
+function renderConversations(conversations) {
+    const messagesList = document.getElementById('messages-list');
+    if (Object.keys(conversations).length === 0) {
+        messagesList.innerHTML = '<p class="empty-state">Još nemaš aktivnih razgovora.</p>';
         return;
     }
 
-    data.forEach(msg => {
-        const isSender = msg.sender_id === currentUser.id;
+    messagesList.innerHTML = '';
+    Object.keys(conversations).forEach(key => {
+        const conv = conversations[key];
         const card = document.createElement('div');
-        card.className = 'message-preview-card';
+        card.className = 'conversation-card';
         card.innerHTML = `
-            <div class="msg-header">
-                <strong>${isSender ? 'Ti' : 'Susjed'}</strong>
-                <span class="time-stamp">${new Date(msg.created_at).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}</span>
-            </div>
-            <p class="msg-preview">${msg.content}</p>
+            <span class="conv-meta">Oglas</span>
+            <div class="conv-ad-title">${conv.title}</div>
+            <p class="conv-last-msg">${conv.lastMsg}</p>
         `;
+        card.onclick = () => {
+            activeConversationAdId = key;
+            renderChatThread(conv);
+        };
         messagesList.appendChild(card);
     });
 }
 
+function renderChatThread(conv) {
+    const messagesList = document.getElementById('messages-list');
+    messagesList.innerHTML = `
+        <div class="chat-thread-container">
+            <div class="thread-header">
+                <button class="back-btn" onclick="goBackToConversations()">
+                    <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                </button>
+                <div class="thread-info">
+                    <h3 style="font-size: 1rem;">${conv.title}</h3>
+                </div>
+            </div>
+            <div class="messages-scroller" id="thread-scroller"></div>
+        </div>
+    `;
+
+    const scroller = document.getElementById('thread-scroller');
+    const threadMsgs = [...conv.messages].reverse();
+    
+    threadMsgs.forEach(msg => {
+        const isSender = msg.sender_id === currentUser.id;
+        const bubble = document.createElement('div');
+        bubble.className = `chat-bubble ${isSender ? 'sent' : 'received'}`;
+        bubble.innerHTML = `
+            ${msg.content}
+            <span class="bubble-time">${new Date(msg.created_at).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' })}</span>
+        `;
+        scroller.appendChild(bubble);
+    });
+
+    scroller.scrollTop = scroller.scrollHeight;
+}
+
+window.goBackToConversations = () => {
+    activeConversationAdId = null;
+    fetchMessages();
+};
+
 // Realtime Subscription
 function initRealtime() {
     if (!currentUser) return;
-    supabaseClient
+    if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
+
+    realtimeChannel = supabaseClient
         .channel('realtime-messages')
         .on('postgres_changes', { 
             event: 'INSERT', 
@@ -504,11 +645,7 @@ function initRealtime() {
             table: 'poruke',
             filter: `receiver_id=eq.${currentUser.id}` 
         }, payload => {
-            if (document.getElementById('messages-screen').classList.contains('active')) {
-                fetchMessages();
-            } else {
-                alert('Nova poruka! 💬');
-            }
+            fetchMessages();
         })
         .subscribe();
 }

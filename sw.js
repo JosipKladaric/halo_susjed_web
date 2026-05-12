@@ -1,4 +1,4 @@
-const CACHE_NAME = 'halo-susjed-v4';
+const CACHE_NAME = 'halo-susjed-v6';
 const ASSETS = [
   '/',
   '/index.html',
@@ -10,7 +10,7 @@ const ASSETS = [
 
 // Install event - caching local assets
 self.addEventListener('install', (event) => {
-  self.skipWaiting(); // Force update to become active immediately
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll(ASSETS);
@@ -22,20 +22,22 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
+  // Let browser handle external assets (like Google Fonts) normally if not in cache
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      return response || fetch(event.request).catch(() => {
-        console.log('Network fetch failed for:', event.request.url);
-      });
+    caches.match(event.request).then((cachedResponse) => {
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      return fetch(event.request); // Don't .catch() and return undefined
     })
   );
 });
 
-// Activate event - clean up old caches and take control
+// Activate event
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     Promise.all([
-      self.clients.claim(), // Take control of all clients immediately
+      self.clients.claim(),
       caches.keys().then((keys) => {
         return Promise.all(
           keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))

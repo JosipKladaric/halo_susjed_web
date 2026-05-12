@@ -56,13 +56,17 @@
             <!-- Add Post Section -->
             <section id="add-screen" class="screen">
                 <div class="screen-header">
-                    <h2>Što ti treba?</h2>
-                    <p>Opiši svoj zahtjev i susjedi će ti se javiti.</p>
+                    <h2>Trebam pomoć...</h2>
+                    <p>Opiši što ti treba, a susjedi koji to imaju će ti se javiti.</p>
                 </div>
                 <form id="post-form" class="modern-form">
                     <div class="form-group">
-                        <label for="description">Opis</label>
-                        <textarea id="description" rows="4" placeholder="Detaljnije opiši što ti treba..." required></textarea>
+                        <label for="description">Što trebam?</label>
+                        <textarea id="description" rows="3" placeholder="Npr. Trebam nekoga da mi pričuva psa na 2 sata..." required></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="reward">Što nudim zauzvrat?</label>
+                        <input type="text" id="reward" placeholder="Npr. 20 EUR, kava i kolači, runda u kafiću..." required>
                     </div>
                     <div class="form-group">
                         <label for="expiry">Trajanje oglasa</label>
@@ -112,13 +116,22 @@
                     <div class="profile-header">
                         <div class="profile-avatar">👤</div>
                         <h3 id="user-display-name">Korisnik</h3>
-                        <p id="user-display-handle" style="color: var(--text-muted); font-size: 0.9rem;"></p>
-                        <button id="logout-btn" class="secondary-btn">Odjavi se</button>
+                        <p id="user-display-handle" style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.5rem;"></p>
+                        
+                        <button id="profile-post-btn" class="submit-btn" style="width: 100%; margin-bottom: 1rem;">
+                            <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2.5" fill="none" style="margin-right: 8px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Nova objava
+                        </button>
+                        
+                        <button id="logout-btn" class="secondary-btn" style="width: 100%;">Odjavi se</button>
                     </div>
-                    <div class="profile-menu">
-                        <button class="menu-item">Moje objave</button>
-                        <button class="menu-item" data-screen="messages-screen">Moje poruke</button>
-                        <button class="menu-item">Postavke</button>
+                    
+                    <div class="my-ads-section">
+                        <h4 style="margin-bottom: 1rem; color: var(--text-main);">Moje aktivne objave</h4>
+                        <div id="my-ads-list" class="my-ads-container">
+                            <!-- User's ads will be injected here -->
+                            <p class="empty-state" style="font-size: 0.85rem;">Trenutno nemate aktivnih oglasa.</p>
+                        </div>
                     </div>
                 </div>
             </section>

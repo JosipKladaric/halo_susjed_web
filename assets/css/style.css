@@ -501,33 +501,191 @@ h1 span { color: var(--primary); }
     flex: 1;
 }
 
-/* Messages Styles */
-.message-preview-card {
+/* Conversations & Chat Thread */
+.conversation-card {
     background: #fff;
-    padding: 1rem;
-    border-radius: 12px;
-    margin-bottom: 0.75rem;
+    padding: 1.25rem;
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
     border: 1px solid #e2e8f0;
-    transition: var(--transition);
     cursor: pointer;
+    transition: var(--transition);
 }
 
-.message-preview-card:active {
-    background: #f8fafc;
+.conversation-card:active {
     transform: scale(0.98);
+    background: #f8fafc;
 }
 
-.msg-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 0.25rem;
+.conv-meta {
+    font-size: 0.75rem;
+    color: var(--primary);
+    font-weight: 700;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.conv-ad-title {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 4px;
+    color: var(--text-main);
+}
+
+.conv-last-msg {
     font-size: 0.9rem;
-}
-
-.msg-preview {
     color: var(--text-muted);
-    font-size: 0.95rem;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+/* Chat Thread View */
+.chat-thread-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+.thread-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.back-btn {
+    background: #f1f5f9;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+}
+
+.messages-scroller {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 80px; /* Space for input if we add one later */
+}
+
+.chat-bubble {
+    max-width: 85%;
+    padding: 10px 14px;
+    border-radius: 18px;
+    font-size: 0.95rem;
+    position: relative;
+}
+
+.chat-bubble.sent {
+    align-self: flex-end;
+    background: var(--primary);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+}
+
+.chat-bubble.received {
+    align-self: flex-start;
+    background: #f1f5f9;
+    color: var(--text-main);
+    border-bottom-left-radius: 4px;
+}
+
+.bubble-time {
+    font-size: 0.7rem;
+    opacity: 0.8;
+    display: block;
+    margin-top: 4px;
+    text-align: right;
+}
+
+/* Profile Redesign */
+.profile-header {
+    text-align: center;
+    padding: 2rem 1.5rem;
+    background: #fff;
+    border-radius: var(--radius);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 2rem;
+}
+
+.profile-avatar {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.my-ads-section {
+    margin-top: 1rem;
+}
+
+.my-ad-item {
+    background: #fff;
+    padding: 1rem;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    margin-bottom: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.my-ad-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.my-ad-desc {
+    font-size: 0.9rem;
+    color: var(--text-main);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.my-ad-expiry {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.my-ad-delete-btn {
+    background: #fee2e2;
+    color: #ef4444;
+    border: none;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: var(--transition);
+}
+
+.my-ad-delete-btn:active {
+    transform: scale(0.9);
+    background: #fecaca;
+}
+
+.reward-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #f0fdf4;
+    color: #16a34a;
+    padding: 6px 12px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    font-weight: 700;
+    border: 1px solid #bbf7d0;
+    margin-top: 10px;
 }
