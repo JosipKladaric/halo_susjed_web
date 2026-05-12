@@ -38,6 +38,7 @@ const postForm = document.getElementById('post-form');
 document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
     initAuth();
+    initForm(); // Wire up the post-oglas form
 
     // Restore local session
     const session = getLocalSession();
@@ -127,7 +128,8 @@ function initAuth() {
                 return;
             }
 
-            const user = { ime, prezime };
+            // Load stored id so currentUser.id works with Supabase
+            const user = { ime, prezime, id: users[key].id };
             saveLocalSession(user);
             handleAuthStateChange(user);
 
@@ -159,10 +161,11 @@ function initAuth() {
                 return;
             }
 
-            users[key] = { ime, prezime, sifra };
+            const newId = generateUUID();
+            users[key] = { ime, prezime, sifra, id: newId };
             saveLocalUsers(users);
 
-            const user = { ime, prezime };
+            const user = { ime, prezime, id: newId };
             saveLocalSession(user);
             handleAuthStateChange(user);
 
@@ -371,7 +374,7 @@ function initForm() {
             btn.style.background = "var(--primary)";
             btn.disabled = false;
             postForm.reset();
-            document.querySelector('[data-screen="feed-screen"]').click();
+            document.getElementById('nav-feed').click();
             fetchNeeds();
         }, 1500);
     });
