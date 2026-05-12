@@ -1,4 +1,4 @@
-const CACHE_NAME = 'halo-susjed-v6';
+const CACHE_NAME = 'halo-susjed-v7';
 const ASSETS = [
   '/',
   '/index.html',

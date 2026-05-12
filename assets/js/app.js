@@ -31,8 +31,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     const profileBtn = document.getElementById('profile-btn');
     if (profileBtn) {
         profileBtn.onclick = () => {
-            const navAuth = document.getElementById('nav-auth');
-            if (navAuth) navAuth.click();
+            // Find the profile screen and activate it
+            const profileScreen = document.getElementById('profile-screen');
+            const screens = document.querySelectorAll('.screen');
+            const navItems = document.querySelectorAll('.nav-item');
+            
+            if (profileScreen) {
+                navItems.forEach(nav => nav.classList.remove('active'));
+                screens.forEach(s => s.classList.remove('active'));
+                profileScreen.classList.add('active');
+                fetchUserAds(); // Refresh ads list
+            }
         };
     }
 
@@ -265,16 +274,12 @@ function renderNeeds(needs) {
     }
 
     let displayNeeds = [...needs];
-    
-    // Filter by distance (50km)
     if (currentUserLocation) {
         displayNeeds = displayNeeds.filter(need => {
             if (!need.lat || !need.lon) return true;
             const dist = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, need.lat, need.lon);
             return dist <= 50;
         });
-
-        // Sort by distance
         displayNeeds.sort((a, b) => {
             const distA = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, a.lat, a.lon) || 9999;
             const distB = calculateDistance(currentUserLocation.lat, currentUserLocation.lon, b.lat, b.lon) || 9999;
@@ -365,12 +370,8 @@ window.deleteAd = async (adId) => {
         .update({ expires_at: now })
         .eq('id', adId);
 
-    if (error) {
-        alert('Greška pri brisanju oglasa.');
-    } else {
-        fetchUserAds();
-        fetchNeeds();
-    }
+    if (error) alert('Greška pri brisanju.');
+    else { fetchUserAds(); fetchNeeds(); }
 };
 
 // Navigation
@@ -382,9 +383,7 @@ function initNavigation() {
         item.onclick = () => {
             const targetScreen = item.getAttribute('data-screen');
             if (!targetScreen) return;
-            
             activeConversationAdId = null;
-            
             navItems.forEach(nav => nav.classList.remove('active'));
             item.classList.add('active');
             screens.forEach(screen => {
@@ -405,18 +404,13 @@ function initForm() {
     if (!postForm) return;
     postForm.onsubmit = async (e) => {
         e.preventDefault();
-
         if (!currentUser) {
-            alert('Morate biti prijavljeni.');
+            alert('Prijavite se.');
             const navAuth = document.getElementById('nav-auth');
             if (navAuth) navAuth.click();
             return;
         }
-
-        if (!currentUserLocation) {
-            alert('Pričekajte očitavanje lokacije...');
-            return;
-        }
+        if (!currentUserLocation) { alert('Lokacija nije spremna.'); return; }
         
         const btn = postForm.querySelector('.submit-btn');
         const originalText = btn.innerText;
@@ -443,13 +437,9 @@ function initForm() {
                 }]);
 
             if (error) throw error;
-
             btn.innerText = "Objavljeno! 🎉";
-            btn.style.background = "#22c55e";
-            
             setTimeout(() => {
                 btn.innerText = originalText;
-                btn.style.background = "var(--primary)";
                 btn.disabled = false;
                 postForm.reset();
                 const navFeed = document.getElementById('nav-feed');
@@ -458,10 +448,9 @@ function initForm() {
             }, 1500);
 
         } catch (err) {
-            console.error('Error:', err);
             btn.innerText = "Greška!";
             btn.disabled = false;
-            alert(`Greška: ${err.message}. Dodajte stupac 'reward' u tablicu 'oglasi'.`);
+            alert(`Greška: ${err.message}`);
         }
     };
 }
@@ -474,13 +463,11 @@ function registerSW() {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        if (confirm('Nova verzija aplikacije je dostupna! Želite li osvježiti?')) {
-                            window.location.reload();
-                        }
+                        if (confirm('Nova verzija dostupna! Osvježiti?')) window.location.reload();
                     }
                 });
             });
-        }).catch(console.error);
+        });
     }
 }
 
@@ -493,14 +480,12 @@ window.handleRespond = (adId, receiverId, adDescription) => {
     const closeBtn = document.getElementById('close-modal');
     
     if (adInfo) adInfo.innerText = `Oglas: "${adDescription}"`;
-    
     modal.classList.add('active');
     closeBtn.onclick = () => modal.classList.remove('active');
     
     sendBtn.onclick = async () => {
         const content = document.getElementById('message-text').value;
         if (!content) return;
-        
         sendBtn.innerText = "Slanje...";
         sendBtn.disabled = true;
 
@@ -513,9 +498,8 @@ window.handleRespond = (adId, receiverId, adDescription) => {
                 content: content
             }]);
 
-        if (error) {
-            alert('Greška pri slanju poruke.');
-        } else {
+        if (error) alert('Greška pri slanju.');
+        else {
             alert('Poruka poslana!');
             modal.classList.remove('active');
             document.getElementById('message-text').value = '';
@@ -532,7 +516,7 @@ async function fetchMessages() {
 
     const { data, error } = await supabaseClient
         .from('poruke')
-        .select(`*, oglas_id (description, expires_at)`)
+        .select(`*, oglas_id (id, description, expires_at, user_id)`)
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .order('created_at', { ascending: false });
 
@@ -546,23 +530,28 @@ async function fetchMessages() {
 
         const expiryDate = new Date(oglas.expires_at);
         const cutoffDate = new Date(expiryDate.getTime() + (24 * 60 * 60 * 1000));
-        
         if (now > cutoffDate) return;
 
-        const oglasKey = msg.oglas_id.description || 'Nepoznat oglas';
-        
-        if (!conversations[oglasKey]) {
-            conversations[oglasKey] = {
+        const oglasId = oglas.id;
+        if (!conversations[oglasId]) {
+            // Find the other person in this conversation
+            // If the user is the owner, they talk to the person who responded
+            // We need to group by (oglasId + otherUser) if multiple people respond to one ad
+            // For simplicity, we group by OglasId for now.
+            
+            conversations[oglasId] = {
                 title: oglas.description,
+                adId: oglasId,
+                adOwnerId: oglas.user_id,
                 messages: [],
                 lastMsg: msg.content,
                 time: msg.created_at
             };
         }
-        conversations[oglasKey].messages.push(msg);
+        conversations[oglasId].messages.push(msg);
     });
 
-    if (activeConversationAdId) {
+    if (activeConversationAdId && conversations[activeConversationAdId]) {
         renderChatThread(conversations[activeConversationAdId]);
     } else {
         renderConversations(conversations);
@@ -577,8 +566,8 @@ function renderConversations(conversations) {
     }
 
     messagesList.innerHTML = '';
-    Object.keys(conversations).forEach(key => {
-        const conv = conversations[key];
+    Object.keys(conversations).forEach(id => {
+        const conv = conversations[id];
         const card = document.createElement('div');
         card.className = 'conversation-card';
         card.innerHTML = `
@@ -587,7 +576,7 @@ function renderConversations(conversations) {
             <p class="conv-last-msg">${conv.lastMsg}</p>
         `;
         card.onclick = () => {
-            activeConversationAdId = key;
+            activeConversationAdId = id;
             renderChatThread(conv);
         };
         messagesList.appendChild(card);
@@ -603,10 +592,17 @@ function renderChatThread(conv) {
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 </button>
                 <div class="thread-info">
-                    <h3 style="font-size: 1rem;">${conv.title}</h3>
+                    <h3 style="font-size: 0.9rem; font-weight: 600;">${conv.title}</h3>
                 </div>
             </div>
-            <div class="messages-scroller" id="thread-scroller"></div>
+            <div class="messages-scroller" id="thread-scroller" style="padding-bottom: 80px;"></div>
+            
+            <div class="chat-input-bar">
+                <input type="text" id="chat-reply-input" placeholder="Napiši poruku...">
+                <button class="chat-send-btn" id="chat-reply-btn">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                </button>
+            </div>
         </div>
     `;
 
@@ -625,6 +621,40 @@ function renderChatThread(conv) {
     });
 
     scroller.scrollTop = scroller.scrollHeight;
+
+    // Handle Reply
+    const replyBtn = document.getElementById('chat-reply-btn');
+    const replyInput = document.getElementById('chat-reply-input');
+
+    replyBtn.onclick = async () => {
+        const content = replyInput.value.trim();
+        if (!content) return;
+
+        // Determine receiver:
+        // If I am the owner, receiver is the OTHER person in the last message
+        // For simplicity: receiver is the person who sent me the last message, 
+        // OR the owner if I am the one who responded first.
+        let receiverId = conv.adOwnerId;
+        if (currentUser.id === conv.adOwnerId) {
+            // If I am the owner, find the first message from someone else
+            const otherMsg = conv.messages.find(m => m.sender_id !== currentUser.id);
+            if (otherMsg) receiverId = otherMsg.sender_id;
+        }
+
+        const { error } = await supabaseClient
+            .from('poruke')
+            .insert([{
+                oglas_id: conv.adId,
+                sender_id: currentUser.id,
+                receiver_id: receiverId,
+                content: content
+            }]);
+
+        if (!error) {
+            replyInput.value = '';
+            fetchMessages(); // Refresh chat
+        }
+    };
 }
 
 window.goBackToConversations = () => {
@@ -636,7 +666,6 @@ window.goBackToConversations = () => {
 function initRealtime() {
     if (!currentUser) return;
     if (realtimeChannel) supabaseClient.removeChannel(realtimeChannel);
-
     realtimeChannel = supabaseClient
         .channel('realtime-messages')
         .on('postgres_changes', { 
@@ -644,8 +673,6 @@ function initRealtime() {
             schema: 'public', 
             table: 'poruke',
             filter: `receiver_id=eq.${currentUser.id}` 
-        }, payload => {
-            fetchMessages();
-        })
+        }, () => fetchMessages())
         .subscribe();
 }
