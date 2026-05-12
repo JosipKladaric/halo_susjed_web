@@ -319,7 +319,7 @@ h1 span { color: var(--primary); }
     right: 0;
     height: 70px;
     background: var(--nav-bg);
-    -webkit-backdrop-filter: blur(10px); /* Safari */
+    -webkit-backdrop-filter: blur(10px);
     backdrop-filter: blur(10px);
     display: flex;
     justify-content: space-around;
@@ -476,7 +476,7 @@ h1 span { color: var(--primary); }
     right: 0;
     bottom: 0;
     background: rgba(0,0,0,0.5);
-    -webkit-backdrop-filter: blur(4px); /* Safari */
+    -webkit-backdrop-filter: blur(4px);
     backdrop-filter: blur(4px);
     z-index: 2000;
     justify-content: center;

@@ -12,14 +12,11 @@ function buildEmail(ime, prezime) {
 let currentUserLocation = null;
 let currentUser = null;
 
-// UI Elements
-const navItems = document.querySelectorAll('.nav-item');
-const screens = document.querySelectorAll('.screen');
-const needsList = document.getElementById('needs-list');
-const postForm = document.getElementById('post-form');
-
 // App Initialization
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log("App initializing...");
+    
+    // Initial UI setup
     initNavigation();
     initAuth();
     initForm();
@@ -27,14 +24,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Handle the top profile button
     const profileBtn = document.getElementById('profile-btn');
     if (profileBtn) {
-        profileBtn.addEventListener('click', () => {
-            document.getElementById('nav-auth').click();
-        });
+        profileBtn.onclick = () => {
+            const navAuth = document.getElementById('nav-auth');
+            if (navAuth) navAuth.click();
+        };
     }
 
     // Restore existing Supabase session
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    handleAuthStateChange(session?.user || null);
+    try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        handleAuthStateChange(session?.user || null);
+    } catch (e) {
+        console.error("Session restore error:", e);
+    }
 
     // Keep UI in sync with auth changes
     supabaseClient.auth.onAuthStateChange((_event, session) => {
@@ -64,7 +66,9 @@ function handleAuthStateChange(user) {
         if (addNavBtn) addNavBtn.style.display = 'flex';
 
         const fullName = currentUser.user_metadata?.full_name || 'Korisnik';
-        document.getElementById('user-display-name').innerText = fullName;
+        const nameEl = document.getElementById('user-display-name');
+        if (nameEl) nameEl.innerText = fullName;
+        
         const handleEl = document.getElementById('user-display-handle');
         if (handleEl) handleEl.innerText = currentUser.email?.replace('@halosusjed.app', '').replace('.', ' ') || '';
 
@@ -104,7 +108,7 @@ function initAuth() {
     const logoutBtn = document.getElementById('logout-btn');
 
     if (btnPrijava) {
-        btnPrijava.addEventListener('click', async () => {
+        btnPrijava.onclick = async () => {
             const ime = document.getElementById('auth-ime').value.trim();
             const prezime = document.getElementById('auth-prezime').value.trim();
             const sifra = document.getElementById('auth-sifra').value;
@@ -128,13 +132,14 @@ function initAuth() {
             if (error) {
                 showAuthError('Pogrešno ime, prezime ili šifra.');
             } else {
-                document.getElementById('nav-feed').click();
+                const navFeed = document.getElementById('nav-feed');
+                if (navFeed) navFeed.click();
             }
-        });
+        };
     }
 
     if (btnRegistracija) {
-        btnRegistracija.addEventListener('click', async () => {
+        btnRegistracija.onclick = async () => {
             const ime = document.getElementById('auth-ime').value.trim();
             const prezime = document.getElementById('auth-prezime').value.trim();
             const sifra = document.getElementById('auth-sifra').value;
@@ -160,8 +165,6 @@ function initAuth() {
                 }
             });
 
-            console.log('SignUp result:', signUpData, error);
-
             btnRegistracija.disabled = false;
             btnRegistracija.textContent = 'Registracija';
 
@@ -172,20 +175,17 @@ function initAuth() {
                     showAuthError(error.message);
                 }
             } else if (signUpData?.user && !signUpData?.session) {
-                // User created but needs confirmation OR confirmation is on
-                showAuthError('Registracija uspješna! ALI: Isključite "Confirm email" u Supabase postavkama (Authentication -> Providers -> Email).');
-                alert('VAŽNO: Supabase zahtijeva potvrdu emaila. Korisnik je kreiran, ali se ne može prijaviti dok ne potvrdite email ili isključite tu opciju u Dashboardu.');
+                showAuthError('Registracija uspješna! Isključite "Confirm email" u Supabase postavkama.');
+                alert('VAŽNO: Supabase zahtijeva potvrdu emaila. Isključite "Confirm email" u Authentication -> Providers -> Email Dashboardu.');
             } else if (signUpData?.session) {
-                // Success and logged in
-                document.getElementById('nav-feed').click();
-            } else {
-                showAuthError('Nešto je pošlo po krivu pri registraciji.');
+                const navFeed = document.getElementById('nav-feed');
+                if (navFeed) navFeed.click();
             }
-        });
+        };
     }
 
     if (logoutBtn) {
-        logoutBtn.addEventListener('click', () => supabaseClient.auth.signOut());
+        logoutBtn.onclick = () => supabaseClient.auth.signOut();
     }
 }
 
@@ -211,7 +211,6 @@ async function detectLocation() {
                 locationInput.style.color = "var(--primary)";
                 locationInput.readOnly = true;
 
-                // Re-fetch or re-render to update distances
                 fetchNeeds();
             } catch (error) {
                 console.error("Location error:", error);
@@ -235,15 +234,14 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 
 // Fetch from Supabase
 async function fetchNeeds() {
+    const needsList = document.getElementById('needs-list');
     if (!needsList) return;
     
     const now = new Date().toISOString();
-    
-    // Fetch ads that haven't expired yet
     const { data, error } = await supabaseClient
         .from('oglasi')
         .select('*')
-        .gt('expires_at', now) // Only active ads
+        .gt('expires_at', now)
         .order('created_at', { ascending: false });
 
     if (error) {
@@ -256,6 +254,8 @@ async function fetchNeeds() {
 
 // Rendering Logic
 function renderNeeds(needs) {
+    const needsList = document.getElementById('needs-list');
+    if (!needsList) return;
     needsList.innerHTML = '';
     
     if (needs.length === 0) {
@@ -263,7 +263,6 @@ function renderNeeds(needs) {
         return;
     }
 
-    // Sort by distance if location available
     let sortedNeeds = [...needs];
     if (currentUserLocation) {
         sortedNeeds.sort((a, b) => {
@@ -283,7 +282,6 @@ function renderNeeds(needs) {
             isAbroad = currentUserLocation.country !== need.country_code;
         }
 
-        // Expiry calculation
         const expiresAt = new Date(need.expires_at);
         const now = new Date();
         const diffMs = expiresAt - now;
@@ -322,8 +320,11 @@ function renderNeeds(needs) {
 
 // Navigation
 function initNavigation() {
+    const navItems = document.querySelectorAll('.nav-item');
+    const screens = document.querySelectorAll('.screen');
+    
     navItems.forEach(item => {
-        item.addEventListener('click', () => {
+        item.onclick = () => {
             const targetScreen = item.getAttribute('data-screen');
             if (!targetScreen) return;
             navItems.forEach(nav => nav.classList.remove('active'));
@@ -335,18 +336,21 @@ function initNavigation() {
                     if (targetScreen === 'messages-screen') fetchMessages();
                 }
             });
-        });
+        };
     });
 }
 
 // Form Logic
+function initForm() {
+    const postForm = document.getElementById('post-form');
     if (!postForm) return;
-    postForm.addEventListener('submit', async (e) => {
+    postForm.onsubmit = async (e) => {
         e.preventDefault();
 
         if (!currentUser) {
             alert('Morate biti prijavljeni da biste objavili oglas.');
-            document.getElementById('nav-auth').click();
+            const navAuth = document.getElementById('nav-auth');
+            if (navAuth) navAuth.click();
             return;
         }
         
@@ -373,10 +377,7 @@ function initNavigation() {
                     poster_name: currentUser.user_metadata?.full_name || 'Susjed'
                 }]);
 
-            if (error) {
-                console.error('Supabase Error:', error);
-                throw error;
-            }
+            if (error) throw error;
 
             btn.innerText = "Objavljeno! 🎉";
             btn.style.background = "#22c55e";
@@ -386,22 +387,18 @@ function initNavigation() {
                 btn.style.background = "var(--primary)";
                 btn.disabled = false;
                 postForm.reset();
-                document.getElementById('nav-feed').click();
+                const navFeed = document.getElementById('nav-feed');
+                if (navFeed) navFeed.click();
                 fetchNeeds();
             }, 1500);
 
         } catch (err) {
-            console.error('Detailed Error:', err);
-            btn.innerText = "Greška (RLS?)";
-            btn.style.background = "#ef4444";
+            console.error('Error:', err);
+            btn.innerText = "Greška!";
             btn.disabled = false;
-            alert(`Greška pri spremanju: ${err.message || 'Provjerite Supabase RLS politike za tablicu oglasi.'}`);
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.style.background = "var(--primary)";
-            }, 3000);
+            alert(`Greška: ${err.message}`);
         }
-    });
+    };
 }
 
 // SW Registration
@@ -415,14 +412,12 @@ function registerSW() {
 
 // Global Handlers
 window.handleRespond = (adId, receiverId) => {
-    if (!currentUser) return; // Should not happen as btn is hidden
-
+    if (!currentUser) return;
     const modal = document.getElementById('message-modal');
     const sendBtn = document.getElementById('send-msg-btn');
     const closeBtn = document.getElementById('close-modal');
     
     modal.classList.add('active');
-    
     closeBtn.onclick = () => modal.classList.remove('active');
     
     sendBtn.onclick = async () => {
@@ -442,14 +437,12 @@ window.handleRespond = (adId, receiverId) => {
             }]);
 
         if (error) {
-            console.error('Error sending message:', error);
             alert('Greška pri slanju poruke.');
         } else {
             alert('Poruka poslana!');
             modal.classList.remove('active');
             document.getElementById('message-text').value = '';
         }
-        
         sendBtn.innerText = "Pošalji";
         sendBtn.disabled = false;
     };
@@ -462,17 +455,11 @@ async function fetchMessages() {
 
     const { data, error } = await supabaseClient
         .from('poruke')
-        .select(`
-            *,
-            oglas_id (description)
-        `)
+        .select(`*, oglas_id (description)`)
         .or(`sender_id.eq.${currentUser.id},receiver_id.eq.${currentUser.id}`)
         .order('created_at', { ascending: false });
 
-    if (error) {
-        console.error('Error fetching messages:', error);
-        return;
-    }
+    if (error) return;
 
     if (data.length === 0) {
         messagesList.innerHTML = '<p class="empty-state">Još nemaš nijednu poruku.</p>';
@@ -498,7 +485,6 @@ async function fetchMessages() {
 // Realtime Subscription
 function initRealtime() {
     if (!currentUser) return;
-
     supabaseClient
         .channel('realtime-messages')
         .on('postgres_changes', { 
@@ -507,12 +493,10 @@ function initRealtime() {
             table: 'poruke',
             filter: `receiver_id=eq.${currentUser.id}` 
         }, payload => {
-            console.log('Nova poruka primljena!', payload);
             if (document.getElementById('messages-screen').classList.contains('active')) {
                 fetchMessages();
             } else {
-                // Show a small notification or badge here
-                alert('Primili ste novu poruku u susjedstvu! 💬');
+                alert('Primili ste novu poruku! 💬');
             }
         })
         .subscribe();
