@@ -335,7 +335,23 @@ h1 span { color: var(--primary); }
     color: #fff;
 }
 
+.submit-btn {
+    background: var(--primary);
+    color: #fff;
+    border: none;
+    padding: 0.9rem 1.25rem;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--transition);
+    font-family: inherit;
+    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+    width: 100%;
+}
+
 .submit-btn:active {
+    background: var(--primary-dark);
     transform: scale(0.98);
 }
 
