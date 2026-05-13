@@ -91,13 +91,15 @@
                     </div>
 
                     <div class="auth-fields modern-form">
-                        <div class="form-group">
-                            <label for="auth-ime">Ime</label>
-                            <input type="text" id="auth-ime" placeholder="Ivan" autocomplete="given-name">
-                        </div>
-                        <div class="form-group">
-                            <label for="auth-prezime">Prezime</label>
-                            <input type="text" id="auth-prezime" placeholder="Horvat" autocomplete="family-name">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="auth-ime">Ime</label>
+                                <input type="text" id="auth-ime" placeholder="Ivan" autocomplete="given-name">
+                            </div>
+                            <div class="form-group">
+                                <label for="auth-prezime">Prezime</label>
+                                <input type="text" id="auth-prezime" placeholder="Horvat" autocomplete="family-name">
+                            </div>
                         </div>
                         <div class="form-group">
                             <label for="auth-sifra">Šifra</label>
@@ -167,6 +169,21 @@
                     <button id="close-modal" class="secondary-btn">Odustani</button>
                     <button id="send-msg-btn" class="submit-btn">Pošalji</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <!-- Custom Confirmation Modal -->
+    <div id="confirm-modal" class="modal">
+        <div class="modal-content confirm-modal-content">
+            <h3 id="confirm-title">Potvrda</h3>
+            <p id="confirm-message" style="margin-bottom: 1.5rem;"></p>
+            <div class="modal-actions">
+                <button id="confirm-cancel" class="secondary-btn">Odustani</button>
+                <button id="confirm-ok" class="submit-btn" style="margin-top: 0;">Potvrdi</button>
             </div>
         </div>
     </div>

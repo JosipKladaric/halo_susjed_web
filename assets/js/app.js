@@ -151,11 +151,51 @@ function handleAuthStateChange(user) {
 }
 
 function showAuthError(msg) {
-    const el = document.getElementById('auth-error');
-    if (!el) return;
-    el.textContent = msg;
-    el.style.display = 'block';
-    setTimeout(() => { el.style.display = 'none'; }, 3500);
+    showToast(msg, 'error');
+}
+
+// Custom UI Helpers
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerText = message;
+    
+    container.appendChild(toast);
+    
+    setTimeout(() => {
+        toast.style.animation = 'toastOut 0.3s ease-in forwards';
+        setTimeout(() => toast.remove(), 300);
+    }, 3500);
+}
+
+function showConfirm(message, onConfirm) {
+    const modal = document.getElementById('confirm-modal');
+    const msgEl = document.getElementById('confirm-message');
+    const okBtn = document.getElementById('confirm-ok');
+    const cancelBtn = document.getElementById('confirm-cancel');
+    
+    if (!modal || !msgEl) return;
+    
+    msgEl.innerText = message;
+    modal.classList.add('active');
+    
+    const cleanup = () => {
+        modal.classList.remove('active');
+        okBtn.onclick = null;
+        cancelBtn.onclick = null;
+    };
+    
+    okBtn.onclick = () => {
+        cleanup();
+        if (onConfirm) onConfirm();
+    };
+    
+    cancelBtn.onclick = () => {
+        cleanup();
+    };
 }
 
 function initAuth() {
@@ -200,7 +240,7 @@ function initAuth() {
             btnPrijava.textContent = 'Prijava';
 
             if (error) {
-                showAuthError('Pogrešno ime, prezime ili šifra.');
+                showToast('Pogrešno ime, prezime ili šifra.', 'error');
             } else {
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
@@ -242,9 +282,9 @@ function initAuth() {
             btnRegistracija.textContent = 'Registracija';
 
             if (error) {
-                showAuthError(error.message);
+                showToast(error.message, 'error');
             } else if (signUpData?.user && !signUpData?.session) {
-                showAuthError('Potrebna potvrda emaila!');
+                showToast('Potrebna potvrda emaila!', 'info');
             } else if (signUpData?.session) {
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
@@ -358,25 +398,27 @@ function renderNeeds(needs, isFiltering = false) {
         const card = document.createElement('div');
         card.className = 'need-card';
         card.innerHTML = `
-            <div class="card-header">
-                <div class="user-meta">
-                    <span class="poster-name">${need.poster_name ? need.poster_name.split(' ')[0] : 'Susjed'}</span>
-                    <span class="meta-separator">-</span>
-                    <span class="location-name">${need.location_name || 'Nepoznato'}</span>
-                    ${distanceStr ? `<span class="meta-separator">-</span> <span class="distance-tag">${distanceStr}</span>` : ''}
+            <div class="need-compact-row">
+                <div class="need-details">
+                    <div class="user-meta">
+                        <span class="poster-name">${need.poster_name ? need.poster_name.split(' ')[0] : 'Susjed'}</span>
+                        <span class="meta-separator">-</span>
+                        <span class="location-name">${need.location_name || 'Nepoznato'}</span>
+                        ${distanceStr ? `<span class="meta-separator">-</span> <span class="distance-tag">${distanceStr}</span>` : ''}
+                    </div>
+                    <p class="description-text">${need.description}</p>
+                    <div class="reward-line">
+                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h14v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
+                        <span>Zauzvrat: ${need.reward || 'Dogovor'}</span>
+                    </div>
                 </div>
-            </div>
-            <p class="description-text">${need.description}</p>
-            <div class="reward-badge">
-                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h14v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
-                Zauzvrat: ${need.reward || 'Dogovor'}
-            </div>
-            <div class="card-footer">
-                ${currentUser ? 
-                    (need.user_id === currentUser.id ? 
-                        `<span class="my-post-badge">Moja objava</span>` : 
-                        `<button class="respond-btn" onclick="handleRespond('${need.id}', '${need.user_id}', '${need.description.replace(/'/g, "\\'")}')">Javi se</button>`
-                    ) : ''}
+                <div class="need-action-area">
+                    ${currentUser ? 
+                        (need.user_id === currentUser.id ? 
+                            `<span class="my-post-badge-mini">Moja</span>` : 
+                            `<button class="respond-btn-compact" onclick="handleRespond('${need.id}', '${need.user_id}', '${need.description.replace(/'/g, "\\'")}')">Javi se</button>`
+                        ) : ''}
+                </div>
             </div>
         `;
         needsList.appendChild(card);
@@ -426,25 +468,30 @@ async function fetchUserAds() {
 }
 
 window.deleteAd = async (adId) => {
-    if (!confirm('Želite li ugasiti ovaj oglas?')) return;
-    
-    // Set expiry to 'now' to effectively expire the ad
-    const now = new Date().toISOString();
-    const { error } = await supabaseClient
-        .from('oglasi')
-        .update({ expires_at: now })
-        .eq('id', adId)
-        .eq('user_id', currentUser.id);
+    showConfirm('Želite li ugasiti ovaj oglas?', async () => {
+        // Use a date far in the past to be absolutely sure it's expired
+        const expiredDate = '1970-01-01T00:00:00Z';
+        
+        // Try both string and numeric ID just in case
+        const idToUse = isNaN(adId) ? adId : parseInt(adId);
+        
+        const { data, error } = await supabaseClient
+            .from('oglasi')
+            .update({ expires_at: expiredDate })
+            .eq('id', idToUse)
+            .eq('user_id', currentUser.id)
+            .select();
 
-    if (error) {
-        console.error("Expire error:", error);
-        alert('Greška pri gašenju oglasa. Provjerite jeste li vlasnik.');
-    } else { 
-        // Force refresh both views
-        await fetchUserAds(); 
-        await fetchNeeds(); 
-        alert('Oglas je uspješno ugašen.');
-    }
+        if (error) {
+            showToast('Greška pri gašenju oglasa.', 'error');
+        } else if (!data || data.length === 0) {
+            showToast('Oglas nije pronađen ili niste vlasnik.', 'error');
+        } else { 
+            await fetchUserAds(); 
+            await fetchNeeds(); 
+            showToast('Oglas je uspješno ugašen.');
+        }
+    });
 };
 
 // Navigation
@@ -478,7 +525,7 @@ function initForm() {
     postForm.onsubmit = async (e) => {
         e.preventDefault();
         if (!currentUser) {
-            alert('Prijavite se.');
+            showToast('Prijavite se.', 'info');
             const navAuth = document.getElementById('nav-auth');
             if (navAuth) navAuth.click();
             return;
@@ -523,7 +570,7 @@ function initForm() {
         } catch (err) {
             btn.innerText = "Greška!";
             btn.disabled = false;
-            alert(`Greška: ${err.message}`);
+            showToast(`Greška: ${err.message}`, 'error');
         }
     };
 }
@@ -536,7 +583,7 @@ function registerSW() {
                 const newWorker = reg.installing;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        if (confirm('Nova verzija dostupna! Osvježiti?')) window.location.reload();
+                        showConfirm('Nova verzija dostupna! Osvježiti?', () => window.location.reload());
                     }
                 });
             });
@@ -572,9 +619,9 @@ window.handleRespond = (adId, receiverId, adDescription) => {
                 sender_name: currentUser.user_metadata?.full_name || 'Susjed'
             }]);
 
-        if (error) alert('Greška pri slanju.');
+        if (error) showToast('Greška pri slanju.', 'error');
         else {
-            alert('Poruka poslana!');
+            showToast('Poruka poslana!');
             modal.classList.remove('active');
             document.getElementById('message-text').value = '';
         }
@@ -607,11 +654,9 @@ async function fetchMessages() {
         const cutoffDate = new Date(expiryDate.getTime() + (24 * 60 * 60 * 1000));
         if (now > cutoffDate) return;
 
-        // Identify the "other" person in this chat
-        // One person is ALWAYS the ad owner. The other is the 'responder'.
         const otherUserId = (msg.sender_id === currentUser.id) ? msg.receiver_id : msg.sender_id;
+        const otherUserName = (msg.sender_id !== currentUser.id) ? msg.sender_name : null;
         
-        // Use a composite key to separate conversations by ad AND person
         const convKey = `${oglas.id}_${otherUserId}`;
 
         if (!conversations[convKey]) {
@@ -620,10 +665,16 @@ async function fetchMessages() {
                 adId: oglas.id,
                 adOwnerId: oglas.user_id,
                 otherUserId: otherUserId,
+                otherUserName: otherUserName || 'Susjed',
                 messages: [],
                 lastMsg: msg.content,
                 time: msg.created_at
             };
+        } else {
+            // If we find the other person's name in any message, update it
+            if (otherUserName && conversations[convKey].otherUserName === 'Susjed') {
+                conversations[convKey].otherUserName = otherUserName;
+            }
         }
         conversations[convKey].messages.push(msg);
     });
@@ -661,8 +712,10 @@ function renderConversations(conversations) {
         const card = document.createElement('div');
         card.className = 'conversation-card';
         card.innerHTML = `
-            <span class="conv-meta">Oglas</span>
-            <div class="conv-ad-title">${conv.title}</div>
+            <div class="conv-header">
+                <span class="conv-meta">Oglas: ${conv.title}</span>
+            </div>
+            <div class="conv-user-name">${conv.otherUserName}</div>
             <p class="conv-last-msg">${conv.lastMsg}</p>
         `;
         card.onclick = () => {
@@ -682,7 +735,8 @@ function renderChatThread(conv) {
                     <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none"><polyline points="15 18 9 12 15 6"></polyline></svg>
                 </button>
                 <div class="thread-info">
-                    <h3 style="font-size: 0.9rem; font-weight: 600;">${conv.title}</h3>
+                    <div class="thread-user-name">${conv.otherUserName}</div>
+                    <div class="thread-ad-title">Oglas: ${conv.title}</div>
                 </div>
             </div>
             <div class="messages-scroller" id="thread-scroller" style="padding-bottom: 80px;"></div>
