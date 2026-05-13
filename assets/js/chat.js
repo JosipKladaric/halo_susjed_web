@@ -131,12 +131,22 @@ function renderChatThread(conv) {
         const isToday = new Date(msg.created_at).toDateString() === new Date().toDateString();
         const displayTime = isToday ? timeStr : `${dateStr}, ${timeStr}`;
 
+        let readStatus = '';
+        if (isSender) {
+            readStatus = msg.is_read ? '<span style="color: #6ee7b7; margin-left: 4px;">✓✓</span>' : '<span style="color: rgba(255,255,255,0.7); margin-left: 4px;">✓</span>';
+        }
+
         bubble.innerHTML = `
             <div class="bubble-name">${isSender ? 'Ja' : (msg.sender_name || 'Susjed')}</div>
             <div class="bubble-text">${msg.content}</div>
-            <span class="bubble-time">${displayTime}</span>
+            <span class="bubble-time">${displayTime}${readStatus}</span>
         `;
         scroller.appendChild(bubble);
+        
+        // Mark as read if we are the receiver and it's not read yet
+        if (!isSender && !msg.is_read) {
+            supabaseClient.from('poruke').update({ is_read: true }).eq('id', msg.id).then();
+        }
     });
 
     scroller.scrollTop = scroller.scrollHeight;

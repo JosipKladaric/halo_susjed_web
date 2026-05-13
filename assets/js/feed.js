@@ -1,6 +1,9 @@
 import { state } from './state.js';
 import { supabaseClient } from './config.js';
 import { calculateDistance, showToast, showConfirm } from './utils.js';
+import { compressImage } from './imageUtils.js';
+
+let renderLimit = 15;
 
 export function initSearch() {
     const searchInput = document.getElementById('search-input');
@@ -12,12 +15,13 @@ export function initSearch() {
 }
 
 function filterNeeds(term) {
-    if (!term) { renderNeeds(state.allNeeds); return; }
+    if (!term) { renderLimit = 15; renderNeeds(state.allNeeds); return; }
     const filtered = state.allNeeds.filter(need => 
         need.description.toLowerCase().includes(term) || 
         (need.poster_name && need.poster_name.toLowerCase().includes(term)) ||
         (need.location_name && need.location_name.toLowerCase().includes(term))
     );
+    renderLimit = 15;
     renderNeeds(filtered, true);
 }
 
@@ -30,6 +34,7 @@ export async function fetchNeeds() {
     const { data, error } = await supabaseClient.from('oglasi').select('*').gt('expires_at', now).order('created_at', { ascending: false });
     if (error) return;
     state.allNeeds = data;
+    renderLimit = 15;
     renderNeeds(data);
 }
 
@@ -61,8 +66,10 @@ export function renderNeeds(needs, isFiltering = false) {
         needsList.innerHTML = '<div class="empty-state"><p>Nema aktivnih oglasa u krugu od 50km.</p></div>';
         return;
     }
+
+    const itemsToRender = displayNeeds.slice(0, renderLimit);
     
-    displayNeeds.forEach(need => {
+    itemsToRender.forEach(need => {
         let distanceStr = "";
         if (state.currentUserLocation && need.lat && need.lon) {
             const dist = calculateDistance(state.currentUserLocation.lat, state.currentUserLocation.lon, need.lat, need.lon);
@@ -81,6 +88,7 @@ export function renderNeeds(needs, isFiltering = false) {
             <div class="need-compact-row">
                 <div class="need-details">
                     <p class="description-text" style="margin-top: 0;">${need.description}</p>
+                    ${need.image_url ? `<img src="${need.image_url}" style="max-width: 100%; border-radius: 8px; margin: 8px 0;" loading="lazy" />` : ''}
                     <div class="reward-line">
                         <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h14v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
                         <span>Zauzvrat: ${need.reward || 'Dogovor'}</span>
@@ -97,6 +105,19 @@ export function renderNeeds(needs, isFiltering = false) {
         `;
         needsList.appendChild(card);
     });
+
+    if (displayNeeds.length > renderLimit) {
+        const loadMoreBtn = document.createElement('button');
+        loadMoreBtn.className = 'secondary-btn';
+        loadMoreBtn.style.width = '100%';
+        loadMoreBtn.style.marginTop = '1rem';
+        loadMoreBtn.innerText = 'Učitaj još oglasa';
+        loadMoreBtn.onclick = () => {
+            renderLimit += 15;
+            renderNeeds(needs, isFiltering);
+        };
+        needsList.appendChild(loadMoreBtn);
+    }
 }
 
 export async function fetchUserAds() {
@@ -136,6 +157,28 @@ export async function fetchUserAds() {
 
 export function initForm() {
     const postForm = document.getElementById('post-form');
+    const imageInput = document.getElementById('post-image');
+    const imagePreview = document.getElementById('image-preview');
+
+    if (imageInput && imagePreview) {
+        imageInput.addEventListener('change', async (e) => {
+            if (e.target.files && e.target.files[0]) {
+                try {
+                    const file = e.target.files[0];
+                    const compressedFile = await compressImage(file, 100);
+                    imagePreview.src = URL.createObjectURL(compressedFile);
+                    imagePreview.style.display = 'block';
+                    imageInput.compressedFile = compressedFile;
+                } catch (err) {
+                    showToast('Greška pri kompresiji slike.', 'error');
+                }
+            } else {
+                imagePreview.style.display = 'none';
+                imageInput.compressedFile = null;
+            }
+        });
+    }
+
     if (!postForm) return;
     postForm.onsubmit = async (e) => {
         e.preventDefault();
@@ -149,10 +192,26 @@ export function initForm() {
         
         const btn = postForm.querySelector('.submit-btn');
         const originalText = btn.innerText;
-        btn.innerText = "Objavljujem..."; btn.disabled = true;
+        btn.innerText = "Pripremam..."; btn.disabled = true;
 
         const days = parseInt(document.getElementById('expiry').value);
         const expiresAt = new Date(); expiresAt.setDate(expiresAt.getDate() + days);
+
+        let imageUrl = null;
+        if (imageInput && imageInput.compressedFile) {
+            btn.innerText = "Spremam sliku...";
+            const fileName = `${state.currentUser.id}_${Date.now()}.webp`;
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('oglasi').upload(fileName, imageInput.compressedFile, { contentType: 'image/webp' });
+            if (uploadError) { 
+                showToast('Greška pri uploadu slike.', 'error'); 
+                btn.innerText = originalText; btn.disabled = false;
+                return; 
+            }
+            const { data: { publicUrl } } = supabaseClient.storage.from('oglasi').getPublicUrl(fileName);
+            imageUrl = publicUrl;
+        }
+
+        btn.innerText = "Objavljujem...";
 
         try {
             const { error } = await supabaseClient.from('oglasi').insert([{
@@ -164,7 +223,8 @@ export function initForm() {
                 location_name: state.currentUserLocation.name,
                 expires_at: expiresAt.toISOString(),
                 user_id: state.currentUser.id,
-                poster_name: state.currentUser.user_metadata?.full_name || 'Susjed'
+                poster_name: state.currentUser.user_metadata?.full_name || 'Susjed',
+                image_url: imageUrl
             }]);
 
             if (error) throw error;
@@ -172,6 +232,8 @@ export function initForm() {
             setTimeout(() => {
                 btn.innerText = originalText; btn.disabled = false;
                 postForm.reset();
+                if (imagePreview) imagePreview.style.display = 'none';
+                if (imageInput) imageInput.compressedFile = null;
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
                 fetchNeeds();

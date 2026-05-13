@@ -3,11 +3,47 @@ import { supabaseClient } from './config.js';
 import { showToast, buildEmail, getPasswordSuffix } from './utils.js';
 import { fetchNeeds, fetchUserAds } from './feed.js';
 import { initRealtime } from './chat.js';
+import { compressImage } from './imageUtils.js';
 
 export function initAuth() {
     const btnPrijava = document.getElementById('btn-prijava');
     const btnRegistracija = document.getElementById('btn-registracija');
     const logoutBtn = document.getElementById('logout-btn');
+    const avatarUpload = document.getElementById('avatar-upload');
+
+    if (avatarUpload) {
+        avatarUpload.addEventListener('change', async (e) => {
+            if (e.target.files && e.target.files[0] && state.currentUser) {
+                try {
+                    const file = e.target.files[0];
+                    showToast('Spremam profilnu sliku...', 'info');
+                    const compressedFile = await compressImage(file, 100);
+                    
+                    const fileName = `avatar_${state.currentUser.id}_${Date.now()}.webp`;
+                    const { error: uploadError } = await supabaseClient.storage.from('avatari').upload(fileName, compressedFile, { contentType: 'image/webp' });
+                    
+                    if (uploadError) throw uploadError;
+                    
+                    const { data: { publicUrl } } = supabaseClient.storage.from('avatari').getPublicUrl(fileName);
+                    
+                    const { error: updateError } = await supabaseClient.auth.updateUser({
+                        data: { avatar_url: publicUrl }
+                    });
+                    
+                    if (updateError) throw updateError;
+                    
+                    showToast('Profilna slika ažurirana!');
+                    const avatarEl = document.getElementById('profile-avatar');
+                    if (avatarEl) {
+                        avatarEl.src = publicUrl;
+                        avatarEl.style.display = 'block';
+                    }
+                } catch (err) {
+                    showToast('Greška pri učitavanju profilne slike.', 'error');
+                }
+            }
+        });
+    }
 
     if (btnPrijava) {
         btnPrijava.onclick = async () => {
@@ -93,8 +129,19 @@ export function handleAuthStateChange(user) {
         if (addNavBtn) addNavBtn.style.display = 'flex';
         
         const fullName = state.currentUser.user_metadata?.full_name || 'Korisnik';
+        const avatarUrl = state.currentUser.user_metadata?.avatar_url;
         const nameEl = document.getElementById('user-display-name');
+        const avatarEl = document.getElementById('profile-avatar');
+        
         if (nameEl) nameEl.innerText = fullName;
+        if (avatarEl) {
+            if (avatarUrl) {
+                avatarEl.src = avatarUrl;
+                avatarEl.style.display = 'block';
+            } else {
+                avatarEl.style.display = 'none';
+            }
+        }
 
         if (navAuthBtn) navAuthBtn.setAttribute('data-screen', 'messages-screen');
         if (navAuthLabel) navAuthLabel.innerText = 'Poruke';
