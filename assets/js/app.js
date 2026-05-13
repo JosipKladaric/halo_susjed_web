@@ -63,13 +63,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         };
     }
 
-    const profilePostBtn = document.getElementById('profile-post-btn');
-    if (profilePostBtn) {
-        profilePostBtn.onclick = () => {
-            const navAdd = document.getElementById('nav-add');
-            if (navAdd) navAdd.click();
-        };
-    }
+
 
     supabaseClient.auth.onAuthStateChange((event, session) => {
         handleAuthStateChange(session?.user || null);
@@ -128,8 +122,7 @@ function handleAuthStateChange(user) {
         const nameEl = document.getElementById('user-display-name');
         if (nameEl) nameEl.innerText = fullName;
         
-        const handleEl = document.getElementById('user-display-handle');
-        if (handleEl) handleEl.innerText = currentUser.email?.replace('@halosusjed.app', '').replace('.', ' ') || '';
+
 
         if (navAuthBtn) navAuthBtn.setAttribute('data-screen', 'messages-screen');
         if (navAuthLabel) navAuthLabel.innerText = 'Poruke';
@@ -367,10 +360,11 @@ function renderNeeds(needs, isFiltering = false) {
         card.innerHTML = `
             <div class="card-header">
                 <div class="user-meta">
-                    <span class="poster-name">👤 ${need.poster_name ? need.poster_name.split(' ')[0] : 'Susjed'}</span>
-                    <span class="location-name">📍 ${need.location_name || 'Nepoznato'}</span>
+                    <span class="poster-name">${need.poster_name ? need.poster_name.split(' ')[0] : 'Susjed'}</span>
+                    <span class="meta-separator">-</span>
+                    <span class="location-name">${need.location_name || 'Nepoznato'}</span>
+                    ${distanceStr ? `<span class="meta-separator">-</span> <span class="distance-tag">${distanceStr}</span>` : ''}
                 </div>
-                <div class="distance-tag">${distanceStr}</div>
             </div>
             <p class="description-text">${need.description}</p>
             <div class="reward-badge">
@@ -378,9 +372,6 @@ function renderNeeds(needs, isFiltering = false) {
                 Zauzvrat: ${need.reward || 'Dogovor'}
             </div>
             <div class="card-footer">
-                <div class="time-info">
-                    ${new Date(need.created_at).toLocaleDateString('hr-HR')}
-                </div>
                 ${currentUser ? 
                     (need.user_id === currentUser.id ? 
                         `<span class="my-post-badge">Moja objava</span>` : 
@@ -416,10 +407,15 @@ async function fetchUserAds() {
     data.forEach(ad => {
         const item = document.createElement('div');
         item.className = 'my-ad-item';
+        const expiryDate = new Date(ad.expires_at);
+        const expiryStr = expiryDate.toLocaleDateString('hr-HR', { day: 'numeric', month: 'long' });
+        const expiryTime = expiryDate.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
+
         item.innerHTML = `
             <div class="my-ad-info">
                 <span class="my-ad-desc">${ad.description}</span>
-                <span class="my-ad-expiry">Zauzvrat: ${ad.reward || 'Dogovor'}</span>
+                <span class="my-ad-reward">Zauzvrat: ${ad.reward || 'Dogovor'}</span>
+                <span class="my-ad-expiry">Istječe: ${expiryStr} u ${expiryTime}</span>
             </div>
             <button class="my-ad-delete-btn" onclick="deleteAd('${ad.id}')">
                 <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
