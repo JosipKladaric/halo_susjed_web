@@ -1038,6 +1038,7 @@ body.standalone-app .modal {
     max-width: 450px;
     box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
     animation: slideUp 0.3s ease-out;
+    color: var(--text-main);
 }
 
 @keyframes slideUp {
@@ -1047,6 +1048,7 @@ body.standalone-app .modal {
 
 .modal-content h3 {
     margin-bottom: 0.5rem;
+    color: var(--text-main);
 }
 
 .modal-content textarea {
@@ -1057,6 +1059,11 @@ body.standalone-app .modal {
     font-family: inherit;
     font-size: 1rem;
     margin-bottom: 1rem;
+    color: var(--text-main);
+}
+
+.modal-content textarea::placeholder {
+    color: #94a3b8;
 }
 
 .modal-actions {
@@ -1467,21 +1474,21 @@ body.standalone-app .toast-container {
     --primary: #29406d;
     --primary-dark: #1f3254;
     --secondary: #f2b541;
-    --bg-light: #29406d;
-    --nav-bg: #29406d;
+    --bg-light: #314975;
+    --nav-bg: #314975;
     --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
     --shadow-md: 0 8px 18px rgba(0,0,0,0.12);
     --radius: 18px;
 }
 
 body {
-    background: #29406d;
+    background: #314975;
     min-height: 100vh;
 }
 
 .main-header-sticky,
 .screen-header {
-    background: #29406d;
+    background: #314975;
     backdrop-filter: none;
     border-bottom: none;
 }
