@@ -19,7 +19,7 @@ export function handleRespond(adId, receiverId, adDescription) {
         sendBtn.innerText = "Slanje..."; sendBtn.disabled = true;
 
         const { error } = await supabaseClient.from('poruke').insert([{
-            oglas_id: adId, sender_id: state.currentUser.id, receiver_id: receiverId, content: content, sender_name: state.currentUser.user_metadata?.full_name || 'Susjed'
+            oglas_id: adId, sender_id: state.currentUser.id, receiver_id: receiverId, content: content, sender_name: state.currentUser.user_metadata?.full_name || 'Susjed', is_read: false
         }]);
 
         if (error) showToast('Greška pri slanju.', 'error');
@@ -177,7 +177,7 @@ function renderChatThread(conv) {
         const receiverId = conv.otherUserId;
 
         const { error } = await supabaseClient.from('poruke').insert([{
-            oglas_id: conv.adId, sender_id: state.currentUser.id, receiver_id: receiverId, content: content, sender_name: state.currentUser.user_metadata?.full_name || 'Susjed'
+            oglas_id: conv.adId, sender_id: state.currentUser.id, receiver_id: receiverId, content: content, sender_name: state.currentUser.user_metadata?.full_name || 'Susjed', is_read: false
         }]);
 
         if (!error) { replyInput.value = ''; fetchMessages(); }
