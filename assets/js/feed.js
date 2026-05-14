@@ -29,6 +29,11 @@ function filterNeeds(term) {
     renderNeeds(filtered, true);
 }
 
+function getNeedDistance(need) {
+    if (!state.currentUserLocation || !need.lat || !need.lon) return null;
+    return calculateDistance(state.currentUserLocation.lat, state.currentUserLocation.lon, need.lat, need.lon);
+}
+
 export async function fetchNeeds() {
     if (!state.currentUserLocation) return;
     const needsList = document.getElementById('needs-list');
@@ -54,16 +59,14 @@ export function renderNeeds(needs, isFiltering = false) {
 
     let displayNeeds = [...needs];
     if (state.currentUserLocation) {
-        displayNeeds = displayNeeds.filter(need => {
-            if (!need.lat || !need.lon) return true;
-            const dist = calculateDistance(state.currentUserLocation.lat, state.currentUserLocation.lon, need.lat, need.lon);
-            return dist <= 50;
-        });
-        displayNeeds.sort((a, b) => {
-            const distA = calculateDistance(state.currentUserLocation.lat, state.currentUserLocation.lon, a.lat, a.lon) || 9999;
-            const distB = calculateDistance(state.currentUserLocation.lat, state.currentUserLocation.lon, b.lat, b.lon) || 9999;
-            return distA - distB;
-        });
+        displayNeeds = displayNeeds
+            .map(need => ({ ...need, distanceKm: getNeedDistance(need) }))
+            .filter(need => need.distanceKm === null || need.distanceKm <= 50)
+            .sort((a, b) => {
+                const distA = a.distanceKm === null ? 9999 : a.distanceKm;
+                const distB = b.distanceKm === null ? 9999 : b.distanceKm;
+                return distA - distB;
+            });
     }
 
     if (displayNeeds.length === 0) {
@@ -75,8 +78,8 @@ export function renderNeeds(needs, isFiltering = false) {
 
     itemsToRender.forEach(need => {
         let distanceStr = '';
-        if (state.currentUserLocation && need.lat && need.lon) {
-            const dist = calculateDistance(state.currentUserLocation.lat, state.currentUserLocation.lon, need.lat, need.lon);
+        if (need.distanceKm !== undefined && need.distanceKm !== null) {
+            const dist = need.distanceKm;
             distanceStr = dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`;
         }
 

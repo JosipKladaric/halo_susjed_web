@@ -179,15 +179,15 @@ function renderChatThread(conv) {
         const isToday = new Date(msg.created_at).toDateString() === new Date().toDateString();
         const displayTime = isToday ? timeStr : `${dateStr}, ${timeStr}`;
 
-        let readStatus = '';
-        if (isSender) {
-            readStatus = msg.is_read ? '<span class="message-read message-read-seen">✓✓</span>' : '<span class="message-read">✓</span>';
-        }
+        const statusText = isSender ? (msg.is_read ? 'Pročitano' : 'Poslano') : '';
 
         bubble.innerHTML = `
             <div class="bubble-name">${isSender ? 'Ja' : (msg.sender_name || 'Susjed')}</div>
             <div class="bubble-text">${msg.content}</div>
-            <span class="bubble-time">${displayTime}${readStatus}</span>
+            <span class="bubble-time">
+                ${displayTime}
+                ${statusText ? `<span class="message-status">${statusText}</span>` : ''}
+            </span>
         `;
         scroller.appendChild(bubble);
 

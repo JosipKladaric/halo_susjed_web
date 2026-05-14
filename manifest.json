@@ -4,8 +4,8 @@
   "description": "Susjedstvo na dlanu. Pomozi susjedu ili objavi što trebaš.",
   "start_url": "/index.html",
   "display": "standalone",
-  "background_color": "#0a1e4d",
-  "theme_color": "#0a1e4d",
+  "background_color": "#314975",
+  "theme_color": "#314975",
   "icons": [
     {
       "src": "assets/icons/icon-192.png",

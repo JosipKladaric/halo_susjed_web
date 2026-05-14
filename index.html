@@ -6,7 +6,8 @@
     <title>Halo, susjed! | Susjedstvo na dlanu</title>
     <meta name="description" content="Povežite se sa susjedima. Objavite što trebate i primite ponude od lokalnih ponuđača.">
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0a1e4d">
+    <meta name="theme-color" content="#314975">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -171,7 +172,7 @@
         </div>
 
         <div id="qr-modal" class="modal" onclick="this.classList.remove('active')">
-            <div class="modal-content modal-content-image">
+            <div class="modal-content modal-content-qr">
                 <div class="qr-card" onclick="event.stopPropagation()">
                     <h3>Pozovi susjeda</h3>
                     <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://halosusjedweb.vercel.app/" alt="QR kod" class="qr-image">

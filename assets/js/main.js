@@ -36,6 +36,10 @@ window.showInstallPrompt = async () => {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('App initializing (modular)...');
 
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+        document.body.classList.add('standalone-app');
+    }
+
     initNavigation();
     initAuth();
     initForm();
