@@ -15,9 +15,13 @@ export function initSearch() {
 }
 
 function filterNeeds(term) {
-    if (!term) { renderLimit = 15; renderNeeds(state.allNeeds); return; }
-    const filtered = state.allNeeds.filter(need => 
-        need.description.toLowerCase().includes(term) || 
+    if (!term) {
+        renderLimit = 15;
+        renderNeeds(state.allNeeds);
+        return;
+    }
+    const filtered = state.allNeeds.filter(need =>
+        need.description.toLowerCase().includes(term) ||
         (need.poster_name && need.poster_name.toLowerCase().includes(term)) ||
         (need.location_name && need.location_name.toLowerCase().includes(term))
     );
@@ -29,7 +33,7 @@ export async function fetchNeeds() {
     if (!state.currentUserLocation) return;
     const needsList = document.getElementById('needs-list');
     if (!needsList) return;
-    
+
     const now = new Date().toISOString();
     const { data, error } = await supabaseClient.from('oglasi').select('*').gt('expires_at', now).order('created_at', { ascending: false });
     if (error) return;
@@ -42,7 +46,7 @@ export function renderNeeds(needs, isFiltering = false) {
     const needsList = document.getElementById('needs-list');
     if (!needsList) return;
     needsList.innerHTML = '';
-    
+
     if (needs.length === 0) {
         needsList.innerHTML = '<div class="empty-state"><p>Još nema aktivnih oglasa u tvom susjedstvu.</p></div>';
         return;
@@ -61,16 +65,16 @@ export function renderNeeds(needs, isFiltering = false) {
             return distA - distB;
         });
     }
-    
+
     if (displayNeeds.length === 0) {
-        needsList.innerHTML = '<div class="empty-state"><p>Nema aktivnih oglasa u krugu od 50km.</p></div>';
+        needsList.innerHTML = '<div class="empty-state"><p>Nema aktivnih oglasa u krugu od 50 km.</p></div>';
         return;
     }
 
     const itemsToRender = displayNeeds.slice(0, renderLimit);
-    
+
     itemsToRender.forEach(need => {
-        let distanceStr = "";
+        let distanceStr = '';
         if (state.currentUserLocation && need.lat && need.lon) {
             const dist = calculateDistance(state.currentUserLocation.lat, state.currentUserLocation.lon, need.lat, need.lon);
             distanceStr = dist < 1 ? `${(dist * 1000).toFixed(0)}m` : `${dist.toFixed(1)}km`;
@@ -79,27 +83,27 @@ export function renderNeeds(needs, isFiltering = false) {
         const card = document.createElement('div');
         card.className = 'need-card';
         card.innerHTML = `
-            <div class="user-meta" style="margin-bottom: 8px;">
+            <div class="user-meta card-meta-row">
                 <span class="poster-name">${need.poster_name ? need.poster_name.split(' ')[0] : 'Susjed'}</span>
                 <span class="meta-separator">-</span>
                 <span class="location-name">${need.location_name || 'Nepoznato'}</span>
                 ${distanceStr ? `<span class="meta-separator">-</span> <span class="distance-tag">${distanceStr}</span>` : ''}
             </div>
-            
+
             <div class="need-details">
-                <p class="description-text" style="margin-top: 0;">${need.description}</p>
-                ${need.image_url ? `<img src="${need.image_url}" onclick="window.openImageModal('${need.image_url}')" style="max-width: 100%; border-radius: 8px; margin: 8px 0; cursor: pointer; display: block;" loading="lazy" />` : ''}
+                <p class="description-text description-text-compact">${need.description}</p>
+                ${need.image_url ? `<img src="${need.image_url}" onclick="window.openImageModal('${need.image_url}')" class="need-image" loading="lazy" />` : ''}
                 <div class="reward-line">
                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h14v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
                     <span>Zauzvrat: ${need.reward || 'Dogovor'}</span>
                 </div>
             </div>
-            
+
             ${state.currentUser ? `
-            <div class="need-action-area" style="margin-top: 12px; display: flex; justify-content: center;">
-                ${need.user_id === state.currentUser.id ? 
-                    `<span class="my-post-badge-mini" style="font-size: 0.85rem; padding: 6px 12px; background: #f8fafc;">Moj oglas</span>` : 
-                    `<button class="submit-btn" style="padding: 0.75rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="window.handleRespond('${need.id}', '${need.user_id}', '${need.description.replace(/'/g, "\\'")}')">
+            <div class="need-action-area need-action-area-center">
+                ${need.user_id === state.currentUser.id ?
+                    `<span class="my-post-badge-mini my-post-badge-mini-compact">Moj oglas</span>` :
+                    `<button class="submit-btn respond-submit-btn" onclick="window.handleRespond('${need.id}', '${need.user_id}', '${need.description.replace(/'/g, "\\'")}')">
                         <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                         Javi se susjedu
                     </button>`
@@ -111,9 +115,7 @@ export function renderNeeds(needs, isFiltering = false) {
 
     if (displayNeeds.length > renderLimit) {
         const loadMoreBtn = document.createElement('button');
-        loadMoreBtn.className = 'secondary-btn';
-        loadMoreBtn.style.width = '100%';
-        loadMoreBtn.style.marginTop = '1rem';
+        loadMoreBtn.className = 'secondary-btn load-more-btn';
         loadMoreBtn.innerText = 'Učitaj još oglasa';
         loadMoreBtn.onclick = () => {
             renderLimit += 15;
@@ -132,7 +134,7 @@ export async function fetchUserAds() {
     if (error) return;
 
     if (data.length === 0) {
-        list.innerHTML = '<p class="empty-state" style="font-size: 0.85rem;">Trenutno nemate aktivnih oglasa.</p>';
+        list.innerHTML = '<p class="empty-state empty-state-small">Trenutno nemate aktivnih oglasa.</p>';
         return;
     }
 
@@ -147,7 +149,7 @@ export async function fetchUserAds() {
         item.innerHTML = `
             <div class="my-ad-info">
                 <span class="my-ad-desc">${ad.description}</span>
-                ${ad.image_url ? `<img src="${ad.image_url}" onclick="window.openImageModal('${ad.image_url}')" style="max-width: 80px; border-radius: 8px; margin: 8px 0; cursor: pointer; display: block;" loading="lazy" />` : ''}
+                ${ad.image_url ? `<img src="${ad.image_url}" onclick="window.openImageModal('${ad.image_url}')" class="my-ad-image" loading="lazy" />` : ''}
                 <span class="my-ad-reward">Zauzvrat: ${ad.reward || 'Dogovor'}</span>
                 <span class="my-ad-expiry">Istječe: ${expiryStr} u ${expiryTime}</span>
             </div>
@@ -192,30 +194,36 @@ export function initForm() {
             if (navAuth) navAuth.click();
             return;
         }
-        if (!state.currentUserLocation) { alert('Lokacija nije spremna.'); return; }
-        
+        if (!state.currentUserLocation) {
+            alert('Lokacija nije spremna.');
+            return;
+        }
+
         const btn = postForm.querySelector('.submit-btn');
         const originalText = btn.innerText;
-        btn.innerText = "Pripremam..."; btn.disabled = true;
+        btn.innerText = 'Pripremam...';
+        btn.disabled = true;
 
         const days = parseInt(document.getElementById('expiry').value);
-        const expiresAt = new Date(); expiresAt.setDate(expiresAt.getDate() + days);
+        const expiresAt = new Date();
+        expiresAt.setDate(expiresAt.getDate() + days);
 
         let imageUrl = null;
         if (imageInput && imageInput.compressedFile) {
-            btn.innerText = "Spremam sliku...";
+            btn.innerText = 'Spremam sliku...';
             const fileName = `${state.currentUser.id}_${Date.now()}.webp`;
-            const { data: uploadData, error: uploadError } = await supabaseClient.storage.from('oglasi').upload(fileName, imageInput.compressedFile, { contentType: 'image/webp' });
-            if (uploadError) { 
-                showToast('Greška pri uploadu slike.', 'error'); 
-                btn.innerText = originalText; btn.disabled = false;
-                return; 
+            const { error: uploadError } = await supabaseClient.storage.from('oglasi').upload(fileName, imageInput.compressedFile, { contentType: 'image/webp' });
+            if (uploadError) {
+                showToast('Greška pri uploadu slike.', 'error');
+                btn.innerText = originalText;
+                btn.disabled = false;
+                return;
             }
             const { data: { publicUrl } } = supabaseClient.storage.from('oglasi').getPublicUrl(fileName);
             imageUrl = publicUrl;
         }
 
-        btn.innerText = "Objavljujem...";
+        btn.innerText = 'Objavljujem...';
 
         try {
             const { error } = await supabaseClient.from('oglasi').insert([{
@@ -232,9 +240,10 @@ export function initForm() {
             }]);
 
             if (error) throw error;
-            btn.innerText = "Objavljeno! 🎉";
+            btn.innerText = 'Objavljeno! 🎉';
             setTimeout(() => {
-                btn.innerText = originalText; btn.disabled = false;
+                btn.innerText = originalText;
+                btn.disabled = false;
                 postForm.reset();
                 if (imagePreview) imagePreview.style.display = 'none';
                 if (imageInput) imageInput.compressedFile = null;
@@ -243,19 +252,24 @@ export function initForm() {
                 fetchNeeds();
             }, 1500);
         } catch (err) {
-            btn.innerText = "Greška!"; btn.disabled = false;
+            btn.innerText = 'Greška!';
+            btn.disabled = false;
             showToast(`Greška: ${err.message}`, 'error');
         }
     };
 }
 
-export async function deleteAd(adId) {
+export function deleteAd(adId) {
     showConfirm('Želite li ugasiti ovaj oglas?', async () => {
         const expiredDate = '1970-01-01T00:00:00Z';
         const idToUse = isNaN(adId) ? adId : parseInt(adId);
         const { data, error } = await supabaseClient.from('oglasi').update({ expires_at: expiredDate }).eq('id', idToUse).eq('user_id', state.currentUser.id).select();
         if (error) showToast('Greška pri gašenju oglasa.', 'error');
         else if (!data || data.length === 0) showToast('Oglas nije pronađen ili niste vlasnik.', 'error');
-        else { await fetchUserAds(); await fetchNeeds(); showToast('Oglas je uspješno ugašen.'); }
+        else {
+            await fetchUserAds();
+            await fetchNeeds();
+            showToast('Oglas je uspješno ugašen.');
+        }
     });
 }

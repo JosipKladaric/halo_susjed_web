@@ -8,23 +8,34 @@ export function handleRespond(adId, receiverId, adDescription) {
     const adInfo = document.getElementById('modal-ad-info');
     const sendBtn = document.getElementById('send-msg-btn');
     const closeBtn = document.getElementById('close-modal');
-    
+
     if (adInfo) adInfo.innerText = `Oglas: "${adDescription}"`;
     modal.classList.add('active');
     closeBtn.onclick = () => modal.classList.remove('active');
-    
+
     sendBtn.onclick = async () => {
         const content = document.getElementById('message-text').value;
         if (!content) return;
-        sendBtn.innerText = "Slanje..."; sendBtn.disabled = true;
+        sendBtn.innerText = 'Slanje...';
+        sendBtn.disabled = true;
 
         const { error } = await supabaseClient.from('poruke').insert([{
-            oglas_id: adId, sender_id: state.currentUser.id, receiver_id: receiverId, content: content, sender_name: state.currentUser.user_metadata?.full_name || 'Susjed', is_read: false
+            oglas_id: adId,
+            sender_id: state.currentUser.id,
+            receiver_id: receiverId,
+            content: content,
+            sender_name: state.currentUser.user_metadata?.full_name || 'Susjed',
+            is_read: false
         }]);
 
         if (error) showToast('Greška pri slanju.', 'error');
-        else { showToast('Poruka poslana!'); modal.classList.remove('active'); document.getElementById('message-text').value = ''; }
-        sendBtn.innerText = "Pošalji"; sendBtn.disabled = false;
+        else {
+            showToast('Poruka poslana!');
+            modal.classList.remove('active');
+            document.getElementById('message-text').value = '';
+        }
+        sendBtn.innerText = 'Pošalji';
+        sendBtn.disabled = false;
     };
 }
 
@@ -42,7 +53,7 @@ export async function fetchMessages() {
     const now = new Date();
     const conversations = {};
     let totalUnread = 0;
-    
+
     data.forEach(msg => {
         const oglas = msg.oglas_id;
         if (!oglas) return;
@@ -56,19 +67,26 @@ export async function fetchMessages() {
         const convKey = `${oglas.id}_${otherUserId}`;
 
         if (!conversations[convKey]) {
-            conversations[convKey] = { title: oglas.description, adId: oglas.id, adOwnerId: oglas.user_id, otherUserId: otherUserId, otherUserName: otherUserName || 'Susjed', messages: [], lastMsg: msg.content, time: msg.created_at };
-        } else {
-            if (otherUserName && conversations[convKey].otherUserName === 'Susjed') conversations[convKey].otherUserName = otherUserName;
+            conversations[convKey] = {
+                title: oglas.description,
+                adId: oglas.id,
+                adOwnerId: oglas.user_id,
+                otherUserId: otherUserId,
+                otherUserName: otherUserName || 'Susjed',
+                messages: [],
+                lastMsg: msg.content,
+                time: msg.created_at
+            };
+        } else if (otherUserName && conversations[convKey].otherUserName === 'Susjed') {
+            conversations[convKey].otherUserName = otherUserName;
         }
         conversations[convKey].messages.push(msg);
 
-        // Calculate unread messages
         if (msg.receiver_id === state.currentUser.id && !msg.is_read) {
             totalUnread++;
         }
     });
 
-    // Update unread badge
     const badge = document.getElementById('unread-badge');
     if (badge) {
         if (totalUnread > 0) {
@@ -107,15 +125,16 @@ function renderConversations(conversations) {
             <div class="conv-user-name">${conv.otherUserName}</div>
             <p class="conv-last-msg">${conv.lastMsg}</p>
         `;
-        card.onclick = () => { state.activeConversationAdId = convKey; renderChatThread(conv); };
+        card.onclick = () => {
+            state.activeConversationAdId = convKey;
+            renderChatThread(conv);
+        };
         messagesList.appendChild(card);
     });
 }
 
 function renderChatThread(conv) {
     const messagesList = document.getElementById('messages-list');
-    
-    // Spremi vrijednost i focus status inputa
     const currentInput = document.getElementById('chat-reply-input');
     const savedValue = currentInput ? currentInput.value : '';
     const wasFocused = currentInput === document.activeElement;
@@ -131,7 +150,7 @@ function renderChatThread(conv) {
                     <div class="thread-ad-title">Oglas: ${conv.title}</div>
                 </div>
             </div>
-            <div class="messages-scroller" id="thread-scroller" style="padding-bottom: 80px;"></div>
+            <div class="messages-scroller thread-scroller" id="thread-scroller"></div>
             <div class="chat-input-bar">
                 <input type="text" id="chat-reply-input" placeholder="Napiši poruku...">
                 <button class="chat-send-btn" id="chat-reply-btn">
@@ -141,7 +160,6 @@ function renderChatThread(conv) {
         </div>
     `;
 
-    // Vrati vrijednost inputa i focus ako je bio aktivan
     const newInput = document.getElementById('chat-reply-input');
     if (newInput) {
         newInput.value = savedValue;
@@ -150,12 +168,12 @@ function renderChatThread(conv) {
 
     const scroller = document.getElementById('thread-scroller');
     const threadMsgs = [...conv.messages].reverse();
-    
+
     threadMsgs.forEach(msg => {
         const isSender = msg.sender_id === state.currentUser.id;
         const bubble = document.createElement('div');
         bubble.className = `chat-bubble ${isSender ? 'sent' : 'received'}`;
-        
+
         const timeStr = new Date(msg.created_at).toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
         const dateStr = new Date(msg.created_at).toLocaleDateString('hr-HR', { day: 'numeric', month: 'short' });
         const isToday = new Date(msg.created_at).toDateString() === new Date().toDateString();
@@ -163,7 +181,7 @@ function renderChatThread(conv) {
 
         let readStatus = '';
         if (isSender) {
-            readStatus = msg.is_read ? '<span style="color: #6ee7b7; margin-left: 4px;">✓✓</span>' : '<span style="color: rgba(255,255,255,0.7); margin-left: 4px;">✓</span>';
+            readStatus = msg.is_read ? '<span class="message-read message-read-seen">✓✓</span>' : '<span class="message-read">✓</span>';
         }
 
         bubble.innerHTML = `
@@ -172,14 +190,12 @@ function renderChatThread(conv) {
             <span class="bubble-time">${displayTime}${readStatus}</span>
         `;
         scroller.appendChild(bubble);
-        
-        // Mark as read if we are the receiver and it's not read yet
+
         if (!isSender && !msg.is_read) {
             supabaseClient.from('poruke').update({ is_read: true }).eq('id', msg.id).then();
         }
     });
-    
-    // Automatsko skrolanje na dno samo ako ima novih poruka
+
     if (conv.messages.length > state.lastMessageCount) {
         setTimeout(() => {
             if (scroller) {
@@ -202,10 +218,18 @@ function renderChatThread(conv) {
         const receiverId = conv.otherUserId;
 
         const { error } = await supabaseClient.from('poruke').insert([{
-            oglas_id: conv.adId, sender_id: state.currentUser.id, receiver_id: receiverId, content: content, sender_name: state.currentUser.user_metadata?.full_name || 'Susjed', is_read: false
+            oglas_id: conv.adId,
+            sender_id: state.currentUser.id,
+            receiver_id: receiverId,
+            content: content,
+            sender_name: state.currentUser.user_metadata?.full_name || 'Susjed',
+            is_read: false
         }]);
 
-        if (!error) { replyInput.value = ''; fetchMessages(); }
+        if (!error) {
+            replyInput.value = '';
+            fetchMessages();
+        }
     };
 }
 
@@ -223,7 +247,6 @@ export function initRealtime() {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'poruke', filter: `receiver_id=eq.${state.currentUser.id}` }, () => fetchMessages())
         .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'poruke', filter: `sender_id=eq.${state.currentUser.id}` }, () => fetchMessages())
         .subscribe();
-    
-    // Dohvati poruke inicijalno kako bi se ažurirao badge s nepročitanim porukama
+
     fetchMessages();
 }

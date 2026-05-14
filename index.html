@@ -5,33 +5,30 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Halo, susjed! | Susjedstvo na dlanu</title>
     <meta name="description" content="Povežite se sa susjedima. Objavite što trebate i primite ponude od lokalnih ponuđača.">
-    
+
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#0d9488">
+    <meta name="theme-color" content="#0a1e4d">
     <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
-    
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-    
+
     <!-- Styles -->
     <link rel="stylesheet" href="assets/css/style.css">
-    
+
     <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div id="app">
-        <!-- Main Content -->
         <main id="main-content">
-            <!-- Feed Section -->
-            <section id="feed-screen" class="screen active" style="padding-top: 0;">
-                <!-- Header -->
-                <header class="main-header" style="flex-direction: column; gap: 0.5rem; align-items: stretch; padding-bottom: 0.75rem; background: var(--bg-light); margin: 0 -1.5rem; padding-left: 1.5rem; padding-right: 1.5rem; padding-top: 0.5rem; position: sticky; top: 0; z-index: 100;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
+            <section id="feed-screen" class="screen active screen-feed">
+                <header class="main-header main-header-sticky">
+                    <div class="main-header-row">
                         <button id="qr-btn" class="icon-btn" onclick="document.getElementById('qr-modal').classList.add('active')">
                             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
                         </button>
@@ -43,29 +40,27 @@
                             <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
                         </button>
                     </div>
-                    <div class="search-bar" style="margin-bottom: 0;">
-                        <input type="text" placeholder="Pretraži potrebe u susjedstvu..." id="search-input" style="background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); color: #fff; box-shadow: none;">
+                    <div class="search-bar search-bar-compact">
+                        <input type="text" placeholder="Pretraži potrebe u susjedstvu..." id="search-input" class="search-bar-inverse">
                     </div>
                 </header>
-                
-                <div id="needs-list" class="needs-container" style="margin-top: 1rem;">
-                    <!-- Cards will be injected here -->
+
+                <div id="needs-list" class="needs-container needs-container-spaced">
                     <div class="skeleton-card"></div>
                     <div class="skeleton-card"></div>
                     <div class="skeleton-card"></div>
                 </div>
             </section>
 
-            <!-- Add Post Section -->
             <section id="add-screen" class="screen">
-                <div class="screen-header" style="margin-bottom: 1rem;">
-                    <h2 style="font-size: 1.15rem; margin-bottom: 0.25rem;">Novi oglas</h2>
-                    <p style="font-size: 0.85rem; line-height: 1.3;">Opiši što ti treba ili što nudiš, a susjedi će se javiti.</p>
+                <div class="screen-header screen-header-tight">
+                    <h2 class="screen-title-tight">Novi oglas</h2>
+                    <p class="screen-subtitle-tight">Opiši što ti treba ili što nudiš, a susjedi će se javiti.</p>
                 </div>
                 <form id="post-form" class="modern-form">
                     <div class="form-group">
                         <label for="description">Što tražim?</label>
-                        <textarea id="description" rows="3" placeholder="Npr. Trebam kupiti 5kg domaćih jabuka ili trebam posuditi bušilicu na jedan dan..." required></textarea>
+                        <textarea id="description" rows="3" placeholder="Npr. Trebam kupiti 5 kg domaćih jabuka ili posuditi bušilicu na jedan dan..." required></textarea>
                     </div>
                     <div class="form-group">
                         <label for="reward">Što nudim zauzvrat?</label>
@@ -80,18 +75,15 @@
                         </select>
                     </div>
                     <div class="form-group">
-                        <label for="post-image">Fotografija (Opcionalno)</label>
+                        <label for="post-image">Fotografija (opcionalno)</label>
                         <input type="file" id="post-image" accept="image/*" class="file-input">
-                        <img id="image-preview" style="display: none; max-width: 100%; border-radius: 12px; margin-top: 0.5rem;" />
+                        <img id="image-preview" class="image-preview" />
                     </div>
-                    <!-- Location is detected automatically in the background -->
                     <button type="submit" class="submit-btn">Objavi oglas</button>
                 </form>
             </section>
 
-            <!-- Profile Section -->
             <section id="profile-screen" class="screen">
-                <!-- Logged Out View -->
                 <div id="auth-view" class="auth-container">
                     <div class="screen-header">
                         <h2>Priključi se susjedstvu</h2>
@@ -113,7 +105,7 @@
                             <label for="auth-sifra">Šifra</label>
                             <input type="password" id="auth-sifra" placeholder="••••••••" autocomplete="current-password">
                         </div>
-                        <div id="auth-error" class="auth-error" style="display:none;"></div>
+                        <div id="auth-error" class="auth-error hidden"></div>
                         <div class="auth-btn-row">
                             <button id="btn-prijava" class="auth-action-btn secondary-auth-btn">Prijava</button>
                             <button id="btn-registracija" class="auth-action-btn primary-auth-btn">Registracija</button>
@@ -121,29 +113,26 @@
                     </div>
                 </div>
 
-                <!-- Logged In View -->
-                <div id="user-view" class="profile-container" style="display: none;">
+                <div id="user-view" class="profile-container hidden">
                     <div class="profile-header">
-                        <div class="avatar-container" style="position: relative; width: 80px; height: 80px; margin: 0 auto 1rem; border-radius: 50%; overflow: hidden; background: #e2e8f0;">
-                            <img id="profile-avatar" src="" style="width: 100%; height: 100%; object-fit: cover; display: none;" />
-                            <label for="avatar-upload" style="position: absolute; bottom: 0; left: 0; right: 0; background: rgba(0,0,0,0.5); color: white; font-size: 0.7rem; padding: 4px 0; cursor: pointer; text-align: center;">Promijeni</label>
-                            <input type="file" id="avatar-upload" accept="image/*" style="display: none;" />
+                        <div class="avatar-container">
+                            <img id="profile-avatar" src="" class="profile-avatar" />
+                            <label for="avatar-upload" class="avatar-upload-label">Promijeni</label>
+                            <input type="file" id="avatar-upload" accept="image/*" class="hidden-file-input" />
                         </div>
                         <h3 id="user-display-name">Korisnik</h3>
                         <button id="logout-btn" class="logout-btn">Odjavi se</button>
                     </div>
-                    
+
                     <div class="my-ads-section">
-                        <h4 style="margin-bottom: 1rem; color: #ffffff;">Moje aktivne objave</h4>
+                        <h4 class="section-title-light">Moje aktivne objave</h4>
                         <div id="my-ads-list" class="my-ads-container">
-                            <!-- User's ads will be injected here -->
-                            <p class="empty-state" style="font-size: 0.85rem;">Trenutno nemate aktivnih oglasa.</p>
+                            <p class="empty-state empty-state-small">Trenutno nemate aktivnih oglasa.</p>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- Messages Section -->
             <section id="messages-screen" class="screen">
                 <div class="screen-header">
                     <h2>Poruke</h2>
@@ -154,7 +143,6 @@
             </section>
         </main>
 
-        <!-- Navigation -->
         <nav class="bottom-nav">
             <button class="nav-item active" id="nav-feed" data-screen="feed-screen">
                 <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
@@ -165,21 +153,20 @@
                     <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                 </div>
             </button>
-            <button class="nav-item" id="nav-auth" data-screen="profile-screen" style="position: relative;">
+            <button class="nav-item nav-auth-button" id="nav-auth" data-screen="profile-screen">
                 <svg id="nav-auth-icon-login" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
-                <div style="position: relative; display: flex;">
-                    <svg id="nav-auth-icon-msg" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                    <span id="unread-badge" style="display: none; position: absolute; top: -5px; right: -8px; background: #ef4444; color: white; font-size: 0.65rem; font-weight: bold; padding: 2px 5px; border-radius: 10px; line-height: 1;">0</span>
+                <div class="nav-auth-icon-wrap">
+                    <svg id="nav-auth-icon-msg" viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" class="hidden-nav-icon"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                    <span id="unread-badge" class="unread-badge">0</span>
                 </div>
                 <span id="nav-auth-label">Priključi se</span>
             </button>
         </nav>
 
-        <!-- Message Modal -->
         <div id="message-modal" class="modal">
             <div class="modal-content">
                 <h3>Pošalji poruku susjedu</h3>
-                <p id="modal-ad-info" style="font-size: 0.9rem; color: var(--text-muted); margin-bottom: 1rem;"></p>
+                <p id="modal-ad-info" class="modal-subtext"></p>
                 <textarea id="message-text" placeholder="Napiši svoju ponudu ili upit..." rows="4"></textarea>
                 <div class="modal-actions">
                     <button id="close-modal" class="secondary-btn">Odustani</button>
@@ -188,42 +175,37 @@
             </div>
         </div>
 
-        <!-- Image Viewer Modal -->
         <div id="image-modal" class="modal" onclick="this.classList.remove('active')">
-            <div class="modal-content" style="background: transparent; box-shadow: none; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%; max-width: none;">
-                <img id="fullscreen-image" src="" style="max-width: 95vw; max-height: 90vh; border-radius: 8px; object-fit: contain;" />
+            <div class="modal-content modal-content-image">
+                <img id="fullscreen-image" src="" class="fullscreen-image" />
             </div>
         </div>
 
-        <!-- QR Code Modal -->
         <div id="qr-modal" class="modal" onclick="this.classList.remove('active')">
-            <div class="modal-content" style="background: transparent; box-shadow: none; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%; max-width: none;">
-                <div style="background: white; padding: 1.5rem; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);" onclick="event.stopPropagation()">
-                    <h3 style="color: var(--text-main); margin: 0; font-size: 1.25rem;">Pozovi susjeda</h3>
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://halosusjedweb.vercel.app/" alt="QR Kod" style="width: 220px; height: 220px; border-radius: 8px;">
-                    <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0; text-align: center;">Pokaži ovaj kod susjedu.<br>Neka ga skenira kamerom kako<br>bi se pridružio aplikaciji.</p>
-                    <button class="secondary-btn" onclick="document.getElementById('qr-modal').classList.remove('active')" style="width: 100%; margin-top: 0.5rem;">Zatvori</button>
+            <div class="modal-content modal-content-image">
+                <div class="qr-card" onclick="event.stopPropagation()">
+                    <h3>Pozovi susjeda</h3>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://halosusjedweb.vercel.app/" alt="QR kod" class="qr-image">
+                    <p>Pokaži ovaj kod susjedu.<br>Neka ga skenira kamerom kako<br>bi se pridružio aplikaciji.</p>
+                    <button class="secondary-btn qr-close-btn" onclick="document.getElementById('qr-modal').classList.remove('active')">Zatvori</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Toast Notifications -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Custom Confirmation Modal -->
     <div id="confirm-modal" class="modal">
         <div class="modal-content confirm-modal-content">
             <h3 id="confirm-title">Potvrda</h3>
-            <p id="confirm-message" style="margin-bottom: 1.5rem;"></p>
+            <p id="confirm-message" class="confirm-message"></p>
             <div class="modal-actions">
                 <button id="confirm-cancel" class="secondary-btn">Odustani</button>
-                <button id="confirm-ok" class="submit-btn" style="margin-top: 0;">Potvrdi</button>
+                <button id="confirm-ok" class="submit-btn confirm-ok-btn">Potvrdi</button>
             </div>
         </div>
     </div>
 
-    <!-- Scripts -->
     <script type="module" src="assets/js/main.js"></script>
 </body>
 </html>

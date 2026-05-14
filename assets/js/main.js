@@ -6,7 +6,6 @@ import { handleRespond, fetchMessages, goBackToConversations } from './chat.js';
 import { detectLocation } from './location.js';
 import { showConfirm } from './utils.js';
 
-// Globalne metode potrebne za inline HTML onclick (npr. u listi oglasa)
 window.deleteAd = deleteAd;
 window.handleRespond = handleRespond;
 window.goBackToConversations = goBackToConversations;
@@ -35,8 +34,8 @@ window.showInstallPrompt = async () => {
 };
 
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log("App initializing (v7 modular)...");
-    
+    console.log('App initializing (modular)...');
+
     initNavigation();
     initAuth();
     initForm();
@@ -47,7 +46,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const profileScreen = document.getElementById('profile-screen');
             const screens = document.querySelectorAll('.screen');
             const navItems = document.querySelectorAll('.nav-item');
-            
+
             if (profileScreen) {
                 navItems.forEach(nav => nav.classList.remove('active'));
                 screens.forEach(s => s.classList.remove('active'));
@@ -69,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 function initNavigation() {
     const navItems = document.querySelectorAll('.nav-item');
     const screens = document.querySelectorAll('.screen');
-    
+
     navItems.forEach(item => {
         item.onclick = () => {
             const targetScreen = item.getAttribute('data-screen');
