@@ -41,6 +41,7 @@ export async function fetchMessages() {
 
     const now = new Date();
     const conversations = {};
+    let totalUnread = 0;
     
     data.forEach(msg => {
         const oglas = msg.oglas_id;
@@ -60,7 +61,23 @@ export async function fetchMessages() {
             if (otherUserName && conversations[convKey].otherUserName === 'Susjed') conversations[convKey].otherUserName = otherUserName;
         }
         conversations[convKey].messages.push(msg);
+
+        // Calculate unread messages
+        if (msg.receiver_id === state.currentUser.id && !msg.is_read) {
+            totalUnread++;
+        }
     });
+
+    // Update unread badge
+    const badge = document.getElementById('unread-badge');
+    if (badge) {
+        if (totalUnread > 0) {
+            badge.innerText = totalUnread > 99 ? '99+' : totalUnread;
+            badge.style.display = 'block';
+        } else {
+            badge.style.display = 'none';
+        }
+    }
 
     if (state.activeConversationAdId) {
         const currentConv = conversations[state.activeConversationAdId];
@@ -179,4 +196,7 @@ export function initRealtime() {
         .channel('realtime-messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'poruke', filter: `receiver_id=eq.${state.currentUser.id}` }, () => fetchMessages())
         .subscribe();
+    
+    // Dohvati poruke inicijalno kako bi se ažurirao badge s nepročitanim porukama
+    fetchMessages();
 }
