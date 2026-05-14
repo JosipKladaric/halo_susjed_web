@@ -95,7 +95,7 @@ h1 span { color: var(--primary); }
 
 .search-bar input {
     width: 100%;
-    padding: 1rem 1.25rem;
+    padding: 0.6rem 1rem;
     border-radius: var(--radius);
     border: 1px solid #e2e8f0;
     background: #fff;
@@ -428,7 +428,6 @@ h1 span { color: var(--primary); }
     justify-content: center;
     align-items: center;
     color: #1e293b;
-    box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
     border: none;
     font-weight: 700;
     font-size: 0.85rem;
@@ -660,13 +659,13 @@ h1 span { color: var(--primary); }
 .thread-user-name {
     font-weight: 700;
     font-size: 1rem;
-    color: var(--text-main);
+    color: #ffffff;
     line-height: 1.2;
 }
 
 .thread-ad-title {
     font-size: 0.75rem;
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.7);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -705,8 +704,8 @@ h1 span { color: var(--primary); }
 
 .chat-bubble.sent {
     align-self: flex-end;
-    background: var(--primary);
-    color: #fff;
+    background: var(--secondary);
+    color: #1e293b;
     border-bottom-right-radius: 4px;
 }
 
@@ -727,7 +726,7 @@ h1 span { color: var(--primary); }
 
 .chat-bubble.sent .bubble-name {
     text-align: right;
-    color: rgba(255, 255, 255, 0.9);
+    color: rgba(30, 41, 59, 0.85);
 }
 
 .chat-bubble.received .bubble-name {

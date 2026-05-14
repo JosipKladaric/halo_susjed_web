@@ -147,6 +147,7 @@ export async function fetchUserAds() {
         item.innerHTML = `
             <div class="my-ad-info">
                 <span class="my-ad-desc">${ad.description}</span>
+                ${ad.image_url ? `<img src="${ad.image_url}" onclick="window.openImageModal('${ad.image_url}')" style="max-width: 80px; border-radius: 8px; margin: 8px 0; cursor: pointer; display: block;" loading="lazy" />` : ''}
                 <span class="my-ad-reward">Zauzvrat: ${ad.reward || 'Dogovor'}</span>
                 <span class="my-ad-expiry">Istječe: ${expiryStr} u ${expiryTime}</span>
             </div>
