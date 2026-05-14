@@ -96,7 +96,7 @@ export function renderNeeds(needs, isFiltering = false) {
             </div>
             
             ${state.currentUser ? `
-            <div class="need-action-area" style="margin-top: 16px; display: flex; justify-content: center; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+            <div class="need-action-area" style="margin-top: 12px; display: flex; justify-content: center;">
                 ${need.user_id === state.currentUser.id ? 
                     `<span class="my-post-badge-mini" style="font-size: 0.85rem; padding: 6px 12px; background: #f8fafc;">Moj oglas</span>` : 
                     `<button class="submit-btn" style="padding: 0.75rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="window.handleRespond('${need.id}', '${need.user_id}', '${need.description.replace(/'/g, "\\'")}')">
