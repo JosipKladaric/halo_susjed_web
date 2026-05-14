@@ -1004,6 +1004,41 @@ body.standalone-app .bottom-nav {
     animation: fadeIn 0.3s ease-out;
 }
 
+.install-card {
+    margin: 1rem 0 2rem;
+    padding: 1rem 1.1rem;
+    border-radius: 18px;
+    background: rgba(255,255,255,0.96);
+    border: 1px solid rgba(15,23,42,0.06);
+    box-shadow: var(--shadow-md);
+    color: var(--text-main);
+}
+
+.install-card h4 {
+    margin-bottom: 0.35rem;
+    font-size: 1rem;
+}
+
+.install-card p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    margin-bottom: 0.9rem;
+}
+
+.install-btn {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: none;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+    background: linear-gradient(180deg, #f6c35e, var(--secondary));
+    box-shadow: 0 8px 16px rgba(242,181,65,0.22);
+    cursor: pointer;
+}
+
 /* Modal Styles */
 .modal {
     display: none;

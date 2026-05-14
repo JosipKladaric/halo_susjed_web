@@ -1,4 +1,4 @@
-const CACHE_NAME = 'halo-susjed-v8';
+const CACHE_NAME = 'halo-susjed-v9';
 const ASSETS = [
   '/',
   '/index.html',
@@ -13,7 +13,8 @@ const ASSETS = [
   '/assets/js/state.js',
   '/assets/js/utils.js',
   '/manifest.json',
-  '/assets/icons/icon-192.png'
+  '/assets/icons/icon-192.png',
+  '/assets/icons/icon-512.png'
 ];
 
 // Install event - caching local assets
@@ -26,17 +27,46 @@ self.addEventListener('install', (event) => {
   );
 });
 
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
+});
+
 // Fetch event
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
 
-  // Let browser handle external assets (like Google Fonts) normally if not in cache
+  const requestUrl = new URL(event.request.url);
+
+  if (requestUrl.origin !== self.location.origin) {
+    return;
+  }
+
+  // Keep the app shell fresh by preferring the network for navigations and HTML.
+  if (event.request.mode === 'navigate' || requestUrl.pathname.endsWith('.html')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const responseClone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          return response;
+        })
+        .catch(() => caches.match(event.request).then((cachedResponse) => cachedResponse || caches.match('/index.html')))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      return fetch(event.request); // Don't .catch() and return undefined
+      return fetch(event.request).then((response) => {
+        const responseClone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        return response;
+      });
     })
   );
 });

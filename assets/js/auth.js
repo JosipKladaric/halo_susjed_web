@@ -5,6 +5,34 @@ import { fetchNeeds, fetchUserAds } from './feed.js';
 import { initRealtime } from './chat.js';
 import { compressImage } from './imageUtils.js';
 
+function maybeShowInstallPrompt() {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (isStandalone) return;
+    if (sessionStorage.getItem('hs_install_prompt_shown') === '1') return;
+    if (typeof window.showInstallPrompt !== 'function') return;
+    sessionStorage.setItem('hs_install_prompt_shown', '1');
+    setTimeout(() => {
+        window.showInstallPrompt();
+    }, 1500);
+}
+
+function syncInstallCard() {
+    const installCard = document.getElementById('install-card');
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+    if (!installCard) return;
+    installCard.classList.toggle('hidden', isStandalone);
+}
+
+function wireInstallButton() {
+    const installBtn = document.getElementById('install-btn');
+    if (!installBtn) return;
+    installBtn.onclick = () => {
+        if (typeof window.showInstallPrompt === 'function') {
+            window.showInstallPrompt();
+        }
+    };
+}
+
 export function initAuth() {
     const btnPrijava = document.getElementById('btn-prijava');
     const btnRegistracija = document.getElementById('btn-registracija');
@@ -21,15 +49,12 @@ export function initAuth() {
 
                     const fileName = `avatar_${state.currentUser.id}_${Date.now()}.webp`;
                     const { error: uploadError } = await supabaseClient.storage.from('avatari').upload(fileName, compressedFile, { contentType: 'image/webp' });
-
                     if (uploadError) throw uploadError;
 
                     const { data: { publicUrl } } = supabaseClient.storage.from('avatari').getPublicUrl(fileName);
-
                     const { error: updateError } = await supabaseClient.auth.updateUser({
                         data: { avatar_url: publicUrl }
                     });
-
                     if (updateError) throw updateError;
 
                     showToast('Profilna slika ažurirana!');
@@ -69,10 +94,12 @@ export function initAuth() {
 
             btnPrijava.disabled = false;
             btnPrijava.textContent = 'Prijava';
-            if (error) showToast('Pogrešno ime, prezime ili šifra.', 'error');
-            else {
+            if (error) {
+                showToast('Pogrešno ime, prezime ili šifra.', 'error');
+            } else {
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
+                maybeShowInstallPrompt();
             }
         };
     }
@@ -112,17 +139,14 @@ export function initAuth() {
             btnRegistracija.disabled = false;
             btnRegistracija.textContent = 'Registracija';
 
-            if (error) showToast(error.message, 'error');
-            else if (signUpData?.user && !signUpData?.session) showToast('Potrebna potvrda e-maila!', 'info');
-            else if (signUpData?.session) {
+            if (error) {
+                showToast(error.message, 'error');
+            } else if (signUpData?.user && !signUpData?.session) {
+                showToast('Potrebna potvrda e-maila!', 'info');
+            } else if (signUpData?.session) {
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
-
-                if (!window.matchMedia('(display-mode: standalone)').matches && window.showInstallPrompt) {
-                    setTimeout(() => {
-                        window.showInstallPrompt();
-                    }, 1500);
-                }
+                maybeShowInstallPrompt();
             }
         };
     }
@@ -130,6 +154,9 @@ export function initAuth() {
     if (logoutBtn) {
         logoutBtn.onclick = async () => await supabaseClient.auth.signOut();
     }
+
+    syncInstallCard();
+    wireInstallButton();
 }
 
 export function handleAuthStateChange(user) {
@@ -176,6 +203,7 @@ export function handleAuthStateChange(user) {
         }
 
         fetchUserAds();
+        maybeShowInstallPrompt();
     } else {
         if (authView) authView.classList.remove('hidden');
         if (userView) userView.classList.add('hidden');
@@ -191,5 +219,6 @@ export function handleAuthStateChange(user) {
             state.realtimeChannel = null;
         }
     }
+    syncInstallCard();
     fetchNeeds();
 }

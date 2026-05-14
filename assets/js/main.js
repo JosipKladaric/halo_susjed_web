@@ -4,7 +4,6 @@ import { initAuth, handleAuthStateChange } from './auth.js';
 import { initSearch, initForm, deleteAd, fetchUserAds } from './feed.js';
 import { handleRespond, fetchMessages, goBackToConversations } from './chat.js';
 import { detectLocation } from './location.js';
-import { showConfirm } from './utils.js';
 
 window.deleteAd = deleteAd;
 window.handleRespond = handleRespond;
@@ -94,15 +93,25 @@ function initNavigation() {
 
 function registerSW() {
     if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
+        navigator.serviceWorker.register('/sw.js').then((reg) => {
+            const checkForUpdate = () => reg.update().catch(() => {});
+
             reg.addEventListener('updatefound', () => {
                 const newWorker = reg.installing;
+                if (!newWorker) return;
                 newWorker.addEventListener('statechange', () => {
                     if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                        showConfirm('Nova verzija dostupna! Osvježiti?', () => window.location.reload());
+                        newWorker.postMessage({ type: 'SKIP_WAITING' });
                     }
                 });
             });
+
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                window.location.reload();
+            });
+
+            checkForUpdate();
+            setInterval(checkForUpdate, 5 * 60 * 1000);
         });
     }
 }
