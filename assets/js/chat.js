@@ -368,17 +368,21 @@ function renderChatThread(conv) {
                 </div>
             </div>
             <div class="messages-scroller thread-scroller" id="thread-scroller"></div>
-            <div class="chat-media-row">
-                <button type="button" id="chat-image-btn" class="chat-attach-btn">Dodaj sliku</button>
-                <input type="file" id="chat-image-input" accept="image/*" class="hidden-file-input">
-                <div id="chat-image-preview" class="chat-image-preview hidden"></div>
-            </div>
             <div class="chat-input-bar">
+                <button type="button" id="chat-image-btn" class="chat-attach-btn chat-attach-btn-inline" aria-label="Dodaj sliku">
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="7" width="18" height="12" rx="2"></rect>
+                        <path d="M8 7l1.6-3h4.8L16 7"></path>
+                        <circle cx="12" cy="13" r="3"></circle>
+                    </svg>
+                </button>
+                <input type="file" id="chat-image-input" accept="image/*" class="hidden-file-input">
                 <input type="text" id="chat-reply-input" placeholder="Napiši poruku...">
                 <button class="chat-send-btn" id="chat-reply-btn">
                     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="white" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                 </button>
             </div>
+            <div id="chat-image-preview" class="chat-image-preview hidden"></div>
         </div>
     `;
 

@@ -1508,12 +1508,14 @@ body.standalone-app .modal {
     background: #fff;
     border-top: 1px solid #e2e8f0;
     display: flex;
+    align-items: center;
     gap: 10px;
     z-index: 100;
 }
 
 .chat-input-bar input {
     flex: 1;
+    min-width: 0;
     padding: 10px 16px;
     border-radius: 24px;
     border: 1px solid #e2e8f0;
@@ -1534,6 +1536,29 @@ body.standalone-app .modal {
     align-items: center;
     cursor: pointer;
     box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+}
+
+.chat-attach-btn-inline {
+    flex-shrink: 0;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 50%;
+    background: var(--secondary);
+    color: #1e293b;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(13, 148, 136, 0.2);
+}
+
+.chat-attach-btn-inline svg {
+    display: block;
+}
+
+.chat-image-preview {
+    margin: 10px 16px 0;
 }
 
 .chat-send-btn:active {
@@ -1868,8 +1893,7 @@ body {
     to { transform: rotate(360deg); }
 }
 
-.message-media-row,
-.chat-media-row {
+.message-media-row {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
