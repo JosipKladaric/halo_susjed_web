@@ -1,9 +1,17 @@
-const CACHE_NAME = 'halo-susjed-v7';
+const CACHE_NAME = 'halo-susjed-v8';
 const ASSETS = [
   '/',
   '/index.html',
   '/assets/css/style.css',
-  '/assets/js/app.js',
+  '/assets/js/main.js',
+  '/assets/js/auth.js',
+  '/assets/js/chat.js',
+  '/assets/js/config.js',
+  '/assets/js/feed.js',
+  '/assets/js/imageUtils.js',
+  '/assets/js/location.js',
+  '/assets/js/state.js',
+  '/assets/js/utils.js',
   '/manifest.json',
   '/assets/icons/icon-192.png'
 ];

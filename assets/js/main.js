@@ -10,6 +10,29 @@ import { showConfirm } from './utils.js';
 window.deleteAd = deleteAd;
 window.handleRespond = handleRespond;
 window.goBackToConversations = goBackToConversations;
+window.openImageModal = (url) => {
+    const modal = document.getElementById('image-modal');
+    const img = document.getElementById('fullscreen-image');
+    if (modal && img) {
+        img.src = url;
+        modal.classList.add('active');
+    }
+};
+
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    deferredPrompt = e;
+});
+
+window.showInstallPrompt = async () => {
+    if (deferredPrompt) {
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        console.log(`PWA install outcome: ${outcome}`);
+        deferredPrompt = null;
+    }
+};
 
 document.addEventListener('DOMContentLoaded', async () => {
     console.log("App initializing (v7 modular)...");

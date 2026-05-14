@@ -85,23 +85,26 @@ export function renderNeeds(needs, isFiltering = false) {
                 <span class="location-name">${need.location_name || 'Nepoznato'}</span>
                 ${distanceStr ? `<span class="meta-separator">-</span> <span class="distance-tag">${distanceStr}</span>` : ''}
             </div>
-            <div class="need-compact-row">
-                <div class="need-details">
-                    <p class="description-text" style="margin-top: 0;">${need.description}</p>
-                    ${need.image_url ? `<img src="${need.image_url}" style="max-width: 100%; border-radius: 8px; margin: 8px 0;" loading="lazy" />` : ''}
-                    <div class="reward-line">
-                        <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h14v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
-                        <span>Zauzvrat: ${need.reward || 'Dogovor'}</span>
-                    </div>
-                </div>
-                <div class="need-action-area">
-                    ${state.currentUser ? 
-                        (need.user_id === state.currentUser.id ? 
-                            `<span class="my-post-badge-mini">Moja</span>` : 
-                            `<button class="respond-btn-compact" onclick="window.handleRespond('${need.id}', '${need.user_id}', '${need.description.replace(/'/g, "\\'")}')">Javi se</button>`
-                        ) : ''}
+            
+            <div class="need-details">
+                <p class="description-text" style="margin-top: 0;">${need.description}</p>
+                ${need.image_url ? `<img src="${need.image_url}" onclick="window.openImageModal('${need.image_url}')" style="max-width: 100%; border-radius: 8px; margin: 8px 0; cursor: pointer; display: block;" loading="lazy" />` : ''}
+                <div class="reward-line">
+                    <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h14v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
+                    <span>Zauzvrat: ${need.reward || 'Dogovor'}</span>
                 </div>
             </div>
+            
+            ${state.currentUser ? `
+            <div class="need-action-area" style="margin-top: 16px; display: flex; justify-content: center; border-top: 1px solid #f1f5f9; padding-top: 16px;">
+                ${need.user_id === state.currentUser.id ? 
+                    `<span class="my-post-badge-mini" style="font-size: 0.85rem; padding: 6px 12px; background: #f8fafc;">Moj oglas</span>` : 
+                    `<button class="submit-btn" style="padding: 0.75rem; border-radius: 12px; display: flex; align-items: center; justify-content: center; gap: 8px;" onclick="window.handleRespond('${need.id}', '${need.user_id}', '${need.description.replace(/'/g, "\\'")}')">
+                        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                        Javi se susjedu
+                    </button>`
+                }
+            </div>` : ''}
         `;
         needsList.appendChild(card);
     });

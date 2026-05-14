@@ -102,6 +102,12 @@ export function initAuth() {
             else if (signUpData?.session) {
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
+                
+                if (!window.matchMedia('(display-mode: standalone)').matches && window.showInstallPrompt) {
+                    setTimeout(() => {
+                        window.showInstallPrompt();
+                    }, 1500);
+                }
             }
         };
     }

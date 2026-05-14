@@ -27,6 +27,9 @@
     <div id="app">
         <!-- Header -->
         <header class="main-header">
+            <button id="qr-btn" class="icon-btn" onclick="document.getElementById('qr-modal').classList.add('active')">
+                <svg viewBox="0 0 24 24" width="24" height="24" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg>
+            </button>
             <div class="logo">
                 <span class="logo-icon">👋</span>
                 <h1>Halo, <span>susjed!</span></h1>
@@ -186,6 +189,18 @@
         <div id="image-modal" class="modal" onclick="this.classList.remove('active')">
             <div class="modal-content" style="background: transparent; box-shadow: none; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%; max-width: none;">
                 <img id="fullscreen-image" src="" style="max-width: 95vw; max-height: 90vh; border-radius: 8px; object-fit: contain;" />
+            </div>
+        </div>
+
+        <!-- QR Code Modal -->
+        <div id="qr-modal" class="modal" onclick="this.classList.remove('active')">
+            <div class="modal-content" style="background: transparent; box-shadow: none; padding: 0; display: flex; justify-content: center; align-items: center; height: 100%; max-width: none;">
+                <div style="background: white; padding: 1.5rem; border-radius: 16px; display: flex; flex-direction: column; align-items: center; gap: 1rem; box-shadow: 0 10px 25px rgba(0,0,0,0.2);" onclick="event.stopPropagation()">
+                    <h3 style="color: var(--text-main); margin: 0; font-size: 1.25rem;">Pozovi susjeda</h3>
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://halosusjedweb.vercel.app/" alt="QR Kod" style="width: 220px; height: 220px; border-radius: 8px;">
+                    <p style="color: var(--text-muted); font-size: 0.9rem; margin: 0; text-align: center;">Pokaži ovaj kod susjedu.<br>Neka ga skenira kamerom kako<br>bi se pridružio aplikaciji.</p>
+                    <button class="secondary-btn" onclick="document.getElementById('qr-modal').classList.remove('active')" style="width: 100%; margin-top: 0.5rem;">Zatvori</button>
+                </div>
             </div>
         </div>
     </div>
