@@ -163,6 +163,11 @@
                 <h3>Pošalji poruku susjedu</h3>
                 <p id="modal-ad-info" class="modal-subtext"></p>
                 <textarea id="message-text" placeholder="Napiši svoju ponudu ili upit..." rows="4"></textarea>
+                <div class="message-media-row">
+                    <button type="button" id="message-image-btn" class="media-attach-btn">Dodaj sliku</button>
+                    <input type="file" id="message-image-input" accept="image/*" class="hidden-file-input">
+                    <div id="message-image-preview" class="chat-image-preview hidden"></div>
+                </div>
                 <div class="modal-actions">
                     <button id="close-modal" class="secondary-btn">Odustani</button>
                     <button id="send-msg-btn" class="submit-btn">Pošalji</button>
@@ -170,13 +175,16 @@
             </div>
         </div>
 
-        <div id="image-modal" class="modal" onclick="window.closeImageModal()">
-            <div class="modal-content modal-content-image" onclick="event.stopPropagation()">
+        <div id="image-modal" class="modal image-modal" onclick="window.closeImageModal()">
+            <button class="viewer-close-btn" onclick="window.closeImageModal(); event.stopPropagation();" aria-label="Zatvori sliku">✕</button>
+            <div class="image-viewer-stage" onclick="event.stopPropagation()">
                 <div class="viewer-shell" data-zoom-viewer="image">
                     <img id="fullscreen-image" src="" class="viewer-image" />
                 </div>
+                <div class="viewer-loader hidden" id="viewer-loader">
+                    <div class="viewer-spinner"></div>
+                </div>
                 <p class="viewer-hint">Pinch to zoom • Dvaput dodirni za reset</p>
-                <button class="viewer-close-btn" onclick="window.closeImageModal(); event.stopPropagation();">✕</button>
             </div>
         </div>
 

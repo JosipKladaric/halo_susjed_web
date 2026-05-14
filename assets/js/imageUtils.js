@@ -1,4 +1,4 @@
-export async function compressImage(file, maxKb = 100) {
+export async function compressImage(file, maxKb = 100, maxDimension = 1200) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.readAsDataURL(file);
@@ -11,8 +11,8 @@ export async function compressImage(file, maxKb = 100) {
                 let height = img.height;
                 
                 // Max dimensions to help with compression
-                const MAX_WIDTH = 1200;
-                const MAX_HEIGHT = 1200;
+                const MAX_WIDTH = maxDimension;
+                const MAX_HEIGHT = maxDimension;
 
                 if (width > height) {
                     if (width > MAX_WIDTH) {

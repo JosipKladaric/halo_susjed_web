@@ -235,16 +235,35 @@ function initZoomViewer(kind) {
 window.openImageModal = (url) => {
     const modal = document.getElementById('image-modal');
     const img = document.getElementById('fullscreen-image');
+    const loader = document.getElementById('viewer-loader');
     if (modal && img) {
-        img.src = url;
-        modal.classList.add('active');
+        modal.classList.add('active', 'loading');
         resetViewer('image');
+
+        const clearLoading = () => {
+            modal.classList.remove('loading');
+            if (loader) loader.classList.add('hidden');
+            img.removeEventListener('load', clearLoading);
+            img.removeEventListener('error', clearLoading);
+        };
+
+        img.addEventListener('load', clearLoading);
+        img.addEventListener('error', clearLoading);
+        if (loader) loader.classList.remove('hidden');
+        img.src = '';
+        img.src = url;
+        if (img.complete) clearLoading();
     }
 };
 
 window.closeImageModal = () => {
     const modal = document.getElementById('image-modal');
+    const img = document.getElementById('fullscreen-image');
+    const loader = document.getElementById('viewer-loader');
     if (modal) modal.classList.remove('active');
+    if (img) img.src = '';
+    if (modal) modal.classList.remove('loading');
+    if (loader) loader.classList.add('hidden');
     resetViewer('image');
     resetBrowserZoom();
 };
@@ -290,7 +309,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     initAuth();
     initForm();
     initZoomViewer('image');
-    initZoomViewer('qr');
 
     const profileBtn = document.getElementById('profile-btn');
     if (profileBtn) {

@@ -5,6 +5,24 @@ import { compressImage } from './imageUtils.js';
 
 let renderLimit = 15;
 
+function escapeAttr(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function splitImageUrls(imageUrl) {
+    if (!imageUrl) return { thumbnailUrl: null, fullUrl: null };
+    const [thumbnailUrl, fullUrl] = String(imageUrl).split('||');
+    return {
+        thumbnailUrl: thumbnailUrl || null,
+        fullUrl: fullUrl || thumbnailUrl || null
+    };
+}
+
 export function initSearch() {
     const searchInput = document.getElementById('search-input');
     if (!searchInput) return;
@@ -85,6 +103,7 @@ export function renderNeeds(needs, isFiltering = false) {
 
         const card = document.createElement('div');
         card.className = 'need-card';
+        const needImage = splitImageUrls(need.image_url);
         card.innerHTML = `
             <div class="user-meta card-meta-row">
                 <span class="poster-name">${need.poster_name ? need.poster_name.split(' ')[0] : 'Susjed'}</span>
@@ -95,7 +114,7 @@ export function renderNeeds(needs, isFiltering = false) {
 
             <div class="need-details">
                 <p class="description-text description-text-compact">${need.description}</p>
-                ${need.image_url ? `<img src="${need.image_url}" onclick="window.openImageModal('${need.image_url}')" class="need-image" loading="lazy" />` : ''}
+                ${needImage.thumbnailUrl ? `<img src="${escapeAttr(needImage.thumbnailUrl)}" data-full-image-url="${escapeAttr(needImage.fullUrl)}" onclick="window.openImageModal(this.dataset.fullImageUrl || this.src)" class="need-image" loading="lazy" />` : ''}
                 <div class="reward-line">
                     <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2.5" fill="none"><path d="M20 12V8H6a2 2 0 0 1-2-2 2 2 0 0 1 2-2h14v4"></path><path d="M4 6v12a2 2 0 0 0 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
                     <span>Zauzvrat: ${need.reward || 'Dogovor'}</span>
@@ -145,6 +164,7 @@ export async function fetchUserAds() {
     data.forEach(ad => {
         const item = document.createElement('div');
         item.className = 'my-ad-item';
+        const adImage = splitImageUrls(ad.image_url);
         const expiryDate = new Date(ad.expires_at);
         const expiryStr = expiryDate.toLocaleDateString('hr-HR', { day: 'numeric', month: 'long' });
         const expiryTime = expiryDate.toLocaleTimeString('hr-HR', { hour: '2-digit', minute: '2-digit' });
@@ -152,7 +172,7 @@ export async function fetchUserAds() {
         item.innerHTML = `
             <div class="my-ad-info">
                 <span class="my-ad-desc">${ad.description}</span>
-                ${ad.image_url ? `<img src="${ad.image_url}" onclick="window.openImageModal('${ad.image_url}')" class="my-ad-image" loading="lazy" />` : ''}
+                ${adImage.thumbnailUrl ? `<img src="${escapeAttr(adImage.thumbnailUrl)}" data-full-image-url="${escapeAttr(adImage.fullUrl)}" onclick="window.openImageModal(this.dataset.fullImageUrl || this.src)" class="my-ad-image" loading="lazy" />` : ''}
                 <span class="my-ad-reward">Zauzvrat: ${ad.reward || 'Dogovor'}</span>
                 <span class="my-ad-expiry">Istječe: ${expiryStr} u ${expiryTime}</span>
             </div>
@@ -174,16 +194,19 @@ export function initForm() {
             if (e.target.files && e.target.files[0]) {
                 try {
                     const file = e.target.files[0];
-                    const compressedFile = await compressImage(file, 100);
-                    imagePreview.src = URL.createObjectURL(compressedFile);
+                    const thumbnailFile = await compressImage(file, 10, 256);
+                    const compressedFile = await compressImage(file, 100, 1200);
+                    imagePreview.src = URL.createObjectURL(thumbnailFile);
                     imagePreview.style.display = 'block';
                     imageInput.compressedFile = compressedFile;
+                    imageInput.thumbnailFile = thumbnailFile;
                 } catch (err) {
                     showToast('Greška pri kompresiji slike.', 'error');
                 }
             } else {
                 imagePreview.style.display = 'none';
                 imageInput.compressedFile = null;
+                imageInput.thumbnailFile = null;
             }
         });
     }
@@ -214,16 +237,31 @@ export function initForm() {
         let imageUrl = null;
         if (imageInput && imageInput.compressedFile) {
             btn.innerText = 'Spremam sliku...';
-            const fileName = `${state.currentUser.id}_${Date.now()}.webp`;
-            const { error: uploadError } = await supabaseClient.storage.from('oglasi').upload(fileName, imageInput.compressedFile, { contentType: 'image/webp' });
-            if (uploadError) {
+            const fileBase = `${state.currentUser.id}_${Date.now()}`;
+            const fullName = `${fileBase}.webp`;
+            const thumbName = `${fileBase}_thumb.webp`;
+
+            const { error: fullUploadError } = await supabaseClient.storage.from('oglasi').upload(fullName, imageInput.compressedFile, { contentType: 'image/webp' });
+            if (fullUploadError) {
                 showToast('Greška pri uploadu slike.', 'error');
                 btn.innerText = originalText;
                 btn.disabled = false;
                 return;
             }
-            const { data: { publicUrl } } = supabaseClient.storage.from('oglasi').getPublicUrl(fileName);
-            imageUrl = publicUrl;
+
+            const thumbFile = imageInput.thumbnailFile || imageInput.compressedFile;
+            const { error: thumbUploadError } = await supabaseClient.storage.from('oglasi').upload(thumbName, thumbFile, { contentType: 'image/webp' });
+            if (thumbUploadError) {
+                await supabaseClient.storage.from('oglasi').remove([fullName]);
+                showToast('Greška pri izradi slike za prikaz.', 'error');
+                btn.innerText = originalText;
+                btn.disabled = false;
+                return;
+            }
+
+            const { data: fullData } = supabaseClient.storage.from('oglasi').getPublicUrl(fullName);
+            const { data: thumbData } = supabaseClient.storage.from('oglasi').getPublicUrl(thumbName);
+            imageUrl = `${thumbData.publicUrl}||${fullData.publicUrl}`;
         }
 
         btn.innerText = 'Objavljujem...';
@@ -249,7 +287,10 @@ export function initForm() {
                 btn.disabled = false;
                 postForm.reset();
                 if (imagePreview) imagePreview.style.display = 'none';
-                if (imageInput) imageInput.compressedFile = null;
+                if (imageInput) {
+                    imageInput.compressedFile = null;
+                    imageInput.thumbnailFile = null;
+                }
                 const navFeed = document.getElementById('nav-feed');
                 if (navFeed) navFeed.click();
                 fetchNeeds();
