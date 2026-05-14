@@ -2,7 +2,7 @@
     --primary: #314975;
     --primary-dark: #233454;
     --secondary: #eab308;
-    --bg-light: #e9e5de;
+    --bg-light: #314975;
     --bg-dark: #0f172a;
     --card-bg: #ffffff;
     --text-main: #1e293b;
@@ -24,7 +24,7 @@
 body {
     font-family: 'Outfit', sans-serif;
     background-color: var(--bg-light);
-    color: var(--text-main);
+    color: #ffffff;
     line-height: 1.5;
     overflow-x: hidden;
     padding-bottom: 80px; /* Space for bottom nav */
@@ -35,17 +35,12 @@ h1 { font-size: 1.5rem; font-weight: 700; }
 h2 { font-size: 1.25rem; font-weight: 600; }
 h1 span { color: var(--primary); }
 
-/* Header */
+/* Header is now inlined in index.html, keeping base styles */
 .main-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1rem 1.5rem;
-    background: var(--nav-bg);
     color: #ffffff;
-    position: sticky;
-    top: 0;
-    z-index: 100;
 }
 
 .main-header h1 span {
@@ -268,7 +263,7 @@ h1 span { color: var(--primary); }
 }
 
 .screen-header p {
-    color: var(--text-muted);
+    color: rgba(255, 255, 255, 0.8);
 }
 
 .modern-form {
@@ -295,6 +290,7 @@ h1 span { color: var(--primary); }
 .form-group label {
     font-weight: 600;
     font-size: 0.9rem;
+    color: #ffffff;
 }
 
 .form-group input, 
@@ -306,6 +302,7 @@ h1 span { color: var(--primary); }
     font-family: inherit;
     font-size: 1rem;
     width: 100%;
+    color: var(--text-main);
 }
 
 .input-with-icon {
