@@ -114,6 +114,12 @@ function renderConversations(conversations) {
 
 function renderChatThread(conv) {
     const messagesList = document.getElementById('messages-list');
+    
+    // Spremi vrijednost i focus status inputa
+    const currentInput = document.getElementById('chat-reply-input');
+    const savedValue = currentInput ? currentInput.value : '';
+    const wasFocused = currentInput === document.activeElement;
+
     messagesList.innerHTML = `
         <div class="chat-thread-container">
             <div class="thread-header">
@@ -134,6 +140,13 @@ function renderChatThread(conv) {
             </div>
         </div>
     `;
+
+    // Vrati vrijednost inputa i focus ako je bio aktivan
+    const newInput = document.getElementById('chat-reply-input');
+    if (newInput) {
+        newInput.value = savedValue;
+        if (wasFocused) newInput.focus();
+    }
 
     const scroller = document.getElementById('thread-scroller');
     const threadMsgs = [...conv.messages].reverse();
@@ -165,8 +178,20 @@ function renderChatThread(conv) {
             supabaseClient.from('poruke').update({ is_read: true }).eq('id', msg.id).then();
         }
     });
-
-    scroller.scrollTop = scroller.scrollHeight;
+    
+    // Automatsko skrolanje na dno samo ako ima novih poruka
+    if (conv.messages.length > state.lastMessageCount) {
+        setTimeout(() => {
+            if (scroller) {
+                scroller.scrollTop = scroller.scrollHeight;
+            }
+            window.scrollTo({
+                top: document.body.scrollHeight,
+                behavior: 'smooth'
+            });
+        }, 200);
+        state.lastMessageCount = conv.messages.length;
+    }
 
     const replyBtn = document.getElementById('chat-reply-btn');
     const replyInput = document.getElementById('chat-reply-input');
@@ -186,6 +211,7 @@ function renderChatThread(conv) {
 
 export function goBackToConversations() {
     state.activeConversationAdId = null;
+    state.lastMessageCount = 0;
     fetchMessages();
 }
 
@@ -195,6 +221,7 @@ export function initRealtime() {
     state.realtimeChannel = supabaseClient
         .channel('realtime-messages')
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'poruke', filter: `receiver_id=eq.${state.currentUser.id}` }, () => fetchMessages())
+        .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'poruke', filter: `sender_id=eq.${state.currentUser.id}` }, () => fetchMessages())
         .subscribe();
     
     // Dohvati poruke inicijalno kako bi se ažurirao badge s nepročitanim porukama

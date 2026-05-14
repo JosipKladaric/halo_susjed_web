@@ -260,10 +260,23 @@ h1 span { color: var(--primary); }
 /* Form Styles */
 .screen-header {
     margin-bottom: 2rem;
+    position: sticky;
+    top: -1rem; /* Kompenzacija za padding od .screen */
+    background: var(--bg-light);
+    padding: 1rem 1.5rem;
+    margin: -1rem -1.5rem 2rem -1.5rem;
+    z-index: 100;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.screen-header h2 {
+    margin: 0;
 }
 
 .screen-header p {
     color: rgba(255, 255, 255, 0.8);
+    font-size: 0.85rem;
+    margin-top: 4px;
 }
 
 .modern-form {
@@ -647,8 +660,13 @@ h1 span { color: var(--primary); }
     align-items: center;
     gap: 0.75rem;
     margin-bottom: 1.25rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #f1f5f9;
+    padding: 0.75rem 1.5rem;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    position: sticky;
+    top: -1rem;
+    background: var(--bg-light);
+    z-index: 100;
+    margin: -1rem -1.5rem 1.25rem -1.5rem;
 }
 
 .thread-info {
