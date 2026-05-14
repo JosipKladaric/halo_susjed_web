@@ -176,17 +176,15 @@
                     <img id="fullscreen-image" src="" class="viewer-image" />
                 </div>
                 <p class="viewer-hint">Pinch to zoom • Dvaput dodirni za reset</p>
+                <button class="viewer-close-btn" onclick="window.closeImageModal(); event.stopPropagation();">✕</button>
             </div>
         </div>
 
         <div id="qr-modal" class="modal" onclick="window.closeQrModal()">
-            <div class="modal-content modal-content-qr" onclick="event.stopPropagation()">
+            <div class="modal-content modal-content-qr qr-card" onclick="event.stopPropagation()">
                 <h3>Pozovi susjeda</h3>
-                <div class="viewer-shell viewer-shell-qr" data-zoom-viewer="qr">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://halosusjedweb.vercel.app/" alt="QR kod" class="viewer-image viewer-image-qr">
-                </div>
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=https://halosusjedweb.vercel.app/" alt="QR kod" class="qr-image">
                 <p>Pokaži ovaj kod susjedu.<br>Neka ga skenira kamerom kako<br>bi se pridružio aplikaciji.</p>
-                <p class="viewer-hint">Pinch to zoom • Dvaput dodirni za reset</p>
                 <button class="secondary-btn qr-close-btn" onclick="window.closeQrModal()">Zatvori</button>
             </div>
         </div>

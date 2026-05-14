@@ -508,17 +508,17 @@ body.standalone-app .main-header-sticky {
     box-shadow: none;
     padding: 0;
     display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100%;
-    max-width: none;
+    height: auto;
+    width: auto;
+    max-width: 95vw;
 }
 
 .viewer-shell {
-    width: min(95vw, 92vh);
-    max-width: 92vw;
-    max-height: 92vh;
+    width: auto;
+    max-width: 95vw;
+    max-height: 90vh;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -535,12 +535,13 @@ body.standalone-app .main-header-sticky {
 }
 
 .viewer-image {
-    max-width: 100%;
+    max-width: 95vw;
     max-height: 90vh;
     object-fit: contain;
     display: block;
     transform-origin: center center;
     will-change: transform;
+    cursor: zoom-in;
 }
 
 .viewer-image-qr {
@@ -555,6 +556,24 @@ body.standalone-app .main-header-sticky {
     text-align: center;
     user-select: none;
     -webkit-user-select: none;
+}
+
+.viewer-close-btn {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 14px);
+    right: 14px;
+    width: 2.8rem;
+    height: 2.8rem;
+    border: none;
+    border-radius: 999px;
+    background: rgba(15,23,42,0.82);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2100;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.35);
 }
 
 .modal-content-qr h3 {
@@ -717,10 +736,14 @@ body.standalone-app .main-header-sticky {
     box-shadow: none;
     padding: 0;
     display: flex;
+    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100%;
-    max-width: none;
+    height: auto;
+    width: auto;
+    max-width: 95vw;
+    max-height: 95vh;
+    position: relative;
 }
 
 .modal-content-qr {
@@ -730,15 +753,9 @@ body.standalone-app .main-header-sticky {
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100%;
-    max-width: none;
-}
-
-.fullscreen-image {
+    height: auto;
+    width: auto;
     max-width: 95vw;
-    max-height: 90vh;
-    border-radius: 8px;
-    object-fit: contain;
 }
 
 .qr-card {
@@ -774,6 +791,67 @@ body.standalone-app .main-header-sticky {
 .qr-close-btn {
     width: 100%;
     margin-top: 0.5rem;
+}
+
+.viewer-shell {
+    width: auto;
+    max-width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    overscroll-behavior: contain;
+    overflow: hidden;
+}
+
+.viewer-shell-qr {
+    width: min(88vw, 72vh);
+    flex-shrink: 0;
+}
+
+.viewer-image {
+    max-width: 95vw;
+    max-height: 90vh;
+    object-fit: contain;
+    display: block;
+    transform-origin: center center;
+    will-change: transform;
+    cursor: zoom-in;
+}
+
+.viewer-image-qr {
+    max-width: min(88vw, 72vh);
+    max-height: min(88vw, 72vh);
+}
+
+.viewer-hint {
+    margin: 0.9rem 0 0;
+    font-size: 0.82rem;
+    color: rgba(255,255,255,0.82);
+    text-align: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.viewer-close-btn {
+    position: fixed;
+    top: calc(env(safe-area-inset-top, 0px) + 14px);
+    right: 14px;
+    width: 2.8rem;
+    height: 2.8rem;
+    border: none;
+    border-radius: 999px;
+    background: rgba(15,23,42,0.82);
+    color: #fff;
+    font-size: 1.2rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    z-index: 2100;
+    box-shadow: 0 10px 24px rgba(15,23,42,0.35);
 }
 
 .confirm-message {
