@@ -351,8 +351,8 @@ h1 span { color: var(--primary); }
 }
 
 .submit-btn {
-    background: var(--primary);
-    color: #fff;
+    background: var(--secondary);
+    color: #1e293b;
     border: none;
     padding: 0.9rem 1.25rem;
     border-radius: 12px;
@@ -361,7 +361,7 @@ h1 span { color: var(--primary); }
     cursor: pointer;
     transition: var(--transition);
     font-family: inherit;
-    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+    box-shadow: 0 4px 14px rgba(234, 179, 8, 0.3);
     width: 100%;
 }
 
@@ -516,9 +516,9 @@ h1 span { color: var(--primary); }
 }
 
 .primary-auth-btn {
-    background: var(--primary);
-    color: #fff;
-    box-shadow: 0 4px 14px rgba(13, 148, 136, 0.35);
+    background: var(--secondary);
+    color: #1e293b;
+    box-shadow: 0 4px 14px rgba(234, 179, 8, 0.3);
 }
 
 .primary-auth-btn:active {
@@ -909,8 +909,8 @@ h1 span { color: var(--primary); }
     width: 42px;
     height: 42px;
     border-radius: 50%;
-    background: var(--primary);
-    color: #fff;
+    background: var(--secondary);
+    color: #1e293b;
     border: none;
     display: flex;
     justify-content: center;
