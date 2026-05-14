@@ -1382,56 +1382,52 @@ h1 span { color: var(--primary); }
     max-width: 350px;
 }
 
-/* Visual refresh overrides */
+/* Flat UI overrides */
 :root {
-    --primary: #2d4c7e;
-    --primary-dark: #1f3658;
-    --secondary: #d9a441;
-    --bg-light: #263b63;
-    --nav-bg: rgba(38, 59, 99, 0.96);
-    --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.08);
-    --shadow-md: 0 18px 40px rgba(15, 23, 42, 0.14);
+    --primary: #29406d;
+    --primary-dark: #1f3254;
+    --secondary: #f2b541;
+    --bg-light: #29406d;
+    --nav-bg: #29406d;
+    --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+    --shadow-md: 0 8px 18px rgba(0,0,0,0.12);
     --radius: 18px;
 }
 
 body {
-    background:
-        radial-gradient(circle at top left, rgba(217,164,65,0.16), transparent 28%),
-        radial-gradient(circle at top right, rgba(79,140,255,0.14), transparent 24%),
-        linear-gradient(180deg, #314d7f 0%, var(--bg-light) 35%, #0b1220 100%);
+    background: #29406d;
     min-height: 100vh;
 }
 
 .main-header-sticky,
 .screen-header {
-    background: linear-gradient(180deg, rgba(38,59,99,0.98), rgba(38,59,99,0.9));
-    backdrop-filter: blur(12px);
-    border-bottom: 1px solid rgba(255,255,255,0.12);
+    background: #29406d;
+    backdrop-filter: none;
+    border-bottom: none;
 }
 
 .logo-icon {
     font-size: 1.7rem;
-    filter: drop-shadow(0 6px 16px rgba(0,0,0,0.18));
 }
 
 .search-bar input:focus,
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-    border-color: rgba(79,140,255,0.55);
-    box-shadow: 0 0 0 4px rgba(79,140,255,0.12);
+    border-color: rgba(242,181,65,0.75);
+    box-shadow: 0 0 0 3px rgba(242,181,65,0.16);
 }
 
 .need-card,
 .conversation-card,
 .my-ad-item,
 .profile-header {
-    box-shadow: var(--shadow-sm);
-    border-radius: 22px;
+    box-shadow: var(--shadow-md);
+    border-radius: 20px;
 }
 
 .need-card {
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,248,244,0.96));
+    background: #fffdf9;
     border: 1px solid rgba(15,23,42,0.06);
     position: relative;
     overflow: hidden;
@@ -1443,7 +1439,7 @@ body {
     position: absolute;
     inset: 0 auto 0 0;
     width: 4px;
-    background: linear-gradient(180deg, var(--secondary), #4f8cff);
+    background: #f2b541;
 }
 
 .description-text {
@@ -1469,35 +1465,31 @@ body {
 .submit-btn,
 .primary-auth-btn,
 .fab-inner {
-    box-shadow: 0 12px 24px rgba(217,164,65,0.22);
+    box-shadow: 0 8px 16px rgba(242,181,65,0.22);
 }
 
 .submit-btn,
 .primary-auth-btn,
 .fab-inner {
-    background: linear-gradient(180deg, #efc66d, var(--secondary));
+    background: linear-gradient(180deg, #f6c35e, var(--secondary));
 }
 
 .secondary-btn,
 .auth-action-btn.secondary-auth-btn,
 .my-post-badge-mini,
 .my-post-badge {
-    background: rgba(255,255,255,0.84);
+    background: #fff;
 }
 
 .bottom-nav {
-    border-top: 1px solid rgba(255,255,255,0.08);
-    box-shadow: 0 -10px 30px rgba(0,0,0,0.16);
-}
-
-.nav-item.active svg {
-    filter: drop-shadow(0 6px 12px rgba(217,164,65,0.22));
+    border-top: 1px solid rgba(255,255,255,0.12);
+    box-shadow: 0 -8px 20px rgba(0,0,0,0.12);
 }
 
 .skeleton-card {
-    border-radius: 22px;
+    border-radius: 20px;
     box-shadow: var(--shadow-sm);
-    background: linear-gradient(90deg, rgba(241,245,249,0.92) 25%, rgba(255,255,255,0.98) 50%, rgba(241,245,249,0.92) 75%);
+    background: linear-gradient(90deg, #f1f5f9 25%, #f8fafc 50%, #f1f5f9 75%);
 }
 
 .auth-error {
@@ -1505,25 +1497,24 @@ body {
 }
 
 .profile-header {
-    background: linear-gradient(180deg, rgba(255,255,255,0.96), rgba(248,250,252,0.94));
+    background: #fff;
     border: 1px solid rgba(15,23,42,0.06);
-    box-shadow: var(--shadow-md);
 }
 
 .my-ad-item,
 .conversation-card {
-    background: rgba(255,255,255,0.96);
+    background: #fff;
     border: 1px solid rgba(15,23,42,0.06);
 }
 
 .chat-input-bar {
-    background: rgba(255,255,255,0.96);
+    background: #fff;
     border-top: 1px solid rgba(15,23,42,0.08);
-    box-shadow: 0 -10px 24px rgba(15,23,42,0.08);
+    box-shadow: 0 -8px 18px rgba(15,23,42,0.08);
 }
 
 .modal-content {
-    background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.96));
+    background: #fff;
     border: 1px solid rgba(15,23,42,0.06);
     box-shadow: var(--shadow-md);
 }

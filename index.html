@@ -5,22 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>Halo, susjed! | Susjedstvo na dlanu</title>
     <meta name="description" content="Povežite se sa susjedima. Objavite što trebate i primite ponude od lokalnih ponuđača.">
-
-    <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#0a1e4d">
     <link rel="icon" type="image/png" href="assets/icons/icon-192.png">
     <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
-
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;700&display=swap" rel="stylesheet">
-
-    <!-- Styles -->
     <link rel="stylesheet" href="assets/css/style.css">
-
-    <!-- Supabase CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
@@ -44,7 +36,6 @@
                         <input type="text" placeholder="Pretraži potrebe u susjedstvu..." id="search-input" class="search-bar-inverse">
                     </div>
                 </header>
-
                 <div id="needs-list" class="needs-container needs-container-spaced">
                     <div class="skeleton-card"></div>
                     <div class="skeleton-card"></div>
@@ -89,7 +80,6 @@
                         <h2>Priključi se susjedstvu</h2>
                         <p>Unesite podatke kako biste se prijavili ili registrirali.</p>
                     </div>
-
                     <div class="auth-fields modern-form">
                         <div class="form-row">
                             <div class="form-group">
@@ -123,7 +113,6 @@
                         <h3 id="user-display-name">Korisnik</h3>
                         <button id="logout-btn" class="logout-btn">Odjavi se</button>
                     </div>
-
                     <div class="my-ads-section">
                         <h4 class="section-title-light">Moje aktivne objave</h4>
                         <div id="my-ads-list" class="my-ads-container">
